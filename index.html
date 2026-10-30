@@ -1,0 +1,2801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>국어 받아쓰기 문제 생성기 (Gemini 무료 API 전용 · 초고속 단독 실행)</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --surface-sub: #f8fafc;
+      --border: #cbd5e1;
+      --border-strong: #94a3b8;
+      --text: #0f172a;
+      --text-sub: #475569;
+      --primary: #1e3a8a;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --accent: #0f766e;
+      --accent-light: #f0fdfa;
+      --danger: #b91c1c;
+      --danger-bg: #fef2f2;
+      --warn-bg: #fffbeb;
+      --warn-text: #92400e;
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      word-break: keep-all;
+    }
+
+    .app-container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 20px 16px 48px;
+    }
+
+    /* 헤더 */
+    .app-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .brand-subtitle {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      color: var(--text-sub);
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 버튼 공통 */
+    button {
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--surface-sub);
+      border-color: var(--border-strong);
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .btn-accent:hover:not(:disabled) {
+      background: #115e59;
+    }
+
+    .btn-danger {
+      color: var(--danger);
+      border-color: #fca5a5;
+      background: #fff;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: var(--danger-bg);
+    }
+
+    .btn-sm {
+      padding: 6px 11px;
+      font-size: 0.85rem;
+    }
+
+    /* 알림 / 오류 배너 */
+    .status-banner {
+      display: none;
+      padding: 13px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+      border: 1px solid transparent;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .status-banner.show {
+      display: flex;
+    }
+
+    .status-banner.error {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+
+    .status-banner.info {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: #bfdbfe;
+    }
+
+    .status-banner.success {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-color: #99f6e4;
+    }
+
+    .status-banner.warn {
+      background: var(--warn-bg);
+      color: var(--warn-text);
+      border-color: #fde68a;
+    }
+
+    /* 접이식 패널 (설정 / 보관함) */
+    .drawer-panel {
+      display: none;
+      background: var(--surface);
+      border: 2px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .drawer-panel.open {
+      display: block;
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .drawer-title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .gemini-key-card {
+      border: 2px solid var(--primary);
+      border-radius: 8px;
+      padding: 16px;
+      background: #ffffff;
+    }
+
+    .provider-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .badge-ok {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-none {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .key-input-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .key-input-row input {
+      flex: 1;
+      min-width: 220px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.92rem;
+    }
+
+    /* 메인 조건 선택 카드 */
+    .control-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .field-group label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 8px;
+    }
+
+    .radio-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill-btn {
+      padding: 8px 13px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-sub);
+      font-weight: 600;
+    }
+
+    .pill-btn.selected {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .count-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .count-input {
+      width: 86px;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .provider-select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      background: #fff;
+    }
+
+    .generate-bar {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hint-text {
+      font-size: 0.84rem;
+      color: var(--text-sub);
+      margin: 4px 0 0;
+    }
+
+    /* 탭 및 출력 영역 */
+    .workspace-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .tabs-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+
+    .tab-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      padding: 9px 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-sub);
+      font-weight: 700;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .print-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* 문항 관리 목록 */
+    .item-manage-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      background: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .item-manage-body {
+      flex: 1;
+    }
+
+    .item-sentence-line {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .item-num-badge {
+      display: inline-block;
+      min-width: 28px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 6px;
+      font-weight: 700;
+      margin-right: 8px;
+      font-size: 0.92rem;
+    }
+
+    .char-len-badge {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      background: var(--surface-sub);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-left: 6px;
+    }
+
+    .item-meta-line {
+      font-size: 0.9rem;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+
+    .focus-tag {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-weight: 600;
+      font-size: 0.84rem;
+      margin-right: 6px;
+    }
+
+    /* 보관함 리스트 */
+    .saved-list {
+      max-height: 280px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .saved-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-sub);
+      gap: 10px;
+    }
+
+    /* 인쇄 시트 미리보기 (A4 비율 스타일) */
+    .print-sheet {
+      display: none;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 28px 32px;
+      max-width: 210mm;
+      margin: 0 auto;
+    }
+
+    .print-sheet.active-sheet {
+      display: block;
+    }
+
+    .sheet-header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .sheet-title {
+      margin: 0;
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #000;
+    }
+
+    .sheet-submeta {
+      margin: 4px 0 0;
+      font-size: 0.92rem;
+      color: #334155;
+    }
+
+    .student-info-box {
+      border: 1px solid #0f172a;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .student-info-box td {
+      border: 1px solid #0f172a;
+      padding: 5px 10px;
+      min-width: 62px;
+    }
+
+    .sheet-item {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #cbd5e1;
+    }
+
+    .teacher-sentence {
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: #000;
+      line-height: 1.65;
+    }
+
+    /* 학생용 쓰기 공간 */
+    .student-write-row {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin-bottom: 18px;
+    }
+
+    .student-num-label {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      color: #000;
+    }
+
+    .write-line {
+      height: 34px;
+      border-bottom: 1.5px solid #334155;
+      margin-bottom: 6px;
+      width: 100%;
+    }
+
+    .answer-explanation-box {
+      margin-top: 6px;
+      font-size: 0.94rem;
+      color: #1e293b;
+      padding-left: 28px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-sub);
+    }
+
+    /* 음성 낭독 및 공유 컨트롤 바 */
+    .tts-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: var(--primary-light);
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    .tts-controls-left,
+    .tts-controls-right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tts-select {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: #fff;
+    }
+
+    .speaking-active {
+      border: 2px solid var(--primary) !important;
+      background: #eff6ff !important;
+    }
+
+    /* 학생용 듣기 전용 카드 */
+    .listen-item-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      background: #ffffff;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .share-url-box {
+      display: none;
+      background: var(--surface-sub);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .share-url-box.show {
+      display: block;
+    }
+
+    .share-url-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: monospace;
+      background: #fff;
+    }
+
+    /* A4 인쇄 전용 미디어 쿼리 */
+    @page {
+      size: A4 portrait;
+      margin: 15mm 14mm;
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .app-container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .workspace-card {
+        border: none !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+      }
+
+      .print-sheet {
+        display: none !important;
+        border: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+      }
+
+      .print-sheet.print-target {
+        display: block !important;
+      }
+
+      .sheet-item,
+      .student-write-row {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 상단 헤더 -->
+    <header class="app-header no-print">
+      <div>
+        <h1 class="brand-title">국어 받아쓰기 문제 생성기</h1>
+        <p class="brand-subtitle">Google Gemini 무료 API 전용 · 초고속 생성 · 서버 불필요 단독 실행 웹앱</p>
+      </div>
+      <div class="header-actions">
+        <span id="activeProviderBadge" class="badge badge-none">Gemini 키 확인 중...</span>
+        <button type="button" id="btnToggleSaved" aria-expanded="false">저장된 문제 보관함 (<span id="savedCountLabel">0</span>)</button>
+        <button type="button" id="btnToggleSettings" class="btn-primary" aria-expanded="false">Gemini API 키 설정</button>
+      </div>
+    </header>
+
+    <!-- 안내 및 인쇄 양식 미리보기 바 -->
+    <div id="previewModeBanner" class="status-banner info show no-print">
+      <div>
+        <strong>초고속 생성 모드 적용:</strong> Gemini 내부 추론 대기(`thinkingBudget: 0`)를 끄고 경량 프롬프트를 적용해 생성 속도를 대폭 단축했습니다.
+        우측 상단 <strong>[Gemini API 키 설정]</strong>에서 Google AI Studio 무료 키를 등록해 바로 사용하세요.
+      </div>
+      <button type="button" id="btnLoadLayoutPreview" class="btn-sm">인쇄 양식 확인용 샘플 보기</button>
+    </div>
+
+    <!-- 상태 및 오류 안내 배너 -->
+    <div id="statusBanner" class="status-banner no-print" role="status" aria-live="polite">
+      <div id="statusMessage"></div>
+      <button type="button" id="btnCloseBanner" class="btn-sm" aria-label="안내 닫기">닫기</button>
+    </div>
+
+    <!-- 별도 설정 영역: Google Gemini 무료 API 키 관리 전용 -->
+    <section id="settingsPanel" class="drawer-panel no-print" aria-labelledby="settingsTitle">
+      <div class="drawer-header">
+        <h2 id="settingsTitle" class="drawer-title">Google Gemini 무료 API 키 설정</h2>
+        <button type="button" id="btnCloseSettings" class="btn-sm">닫기</button>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px;">
+        <p class="hint-text" style="margin:0;">
+          • Google AI Studio(<code>aistudio.google.com</code>)에서 결제 카드 등록 없이 무료로 발급받은 API 키를 등록합니다.<br>
+          • 확실한 무료 등급(Free of charge) 모델만 포함되어 있으며, 저장된 키는 화면·인쇄물·내보내는 백업 파일에 절대 노출되지 않습니다.
+        </p>
+        <label style="font-size:0.86rem; font-weight:700; display:flex; align-items:center; gap:6px; background:var(--surface-sub); padding:8px 12px; border:1px solid var(--border); border-radius:8px;">
+          <input type="checkbox" id="chkRememberKeyInBrowser" checked>
+          이 컴퓨터의 브라우저에 API 키 기억하기 (해제 시 현재 창을 닫으면 즉시 삭제)
+        </label>
+      </div>
+      <div id="providerCardsContainer">
+        <!-- JS에서 Gemini 전용 설정 카드 렌더링 -->
+      </div>
+    </section>
+
+    <!-- 저장된 문제 보관함 영역 -->
+    <section id="savedPanel" class="drawer-panel no-print" aria-labelledby="savedTitle">
+      <div class="drawer-header">
+        <h2 id="savedTitle" class="drawer-title">저장된 문제 묶음 보관함</h2>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button type="button" id="btnExportBackup" class="btn-sm">보관함 파일(.json)로 내보내기</button>
+          <button type="button" id="btnImportBackup" class="btn-sm">보관함 파일 불러오기</button>
+          <input type="file" id="fileImportInput" accept=".json,application/json" style="display:none;" aria-label="보관함 JSON 파일 선택">
+          <button type="button" id="btnCloseSaved" class="btn-sm">닫기</button>
+        </div>
+      </div>
+      <p class="hint-text" style="margin-bottom: 12px;">
+        생성한 문제와 난이도별 글자 수 설정은 브라우저에 자동 저장되며, 파일(.json)로 내보내어 컴퓨터에 보관할 수도 있습니다(API 키는 제외됨).
+        저장된 문제 묶음을 열면 자동으로 재생성하지 않고 당시 문항을 그대로 보여줍니다. (누적 중복 방지 문장 이력: <strong id="historyCountLabel">0</strong>문장)
+      </p>
+      <div id="savedSetsContainer" class="saved-list"></div>
+    </section>
+
+    <!-- 1단계: 출제 조건 선택 및 생성 -->
+    <section class="control-card no-print" aria-label="출제 조건 선택">
+      <h2 class="section-title">1. 출제 조건 선택</h2>
+      <div class="controls-grid">
+        <!-- 난이도 및 최대 글자 수 지정 -->
+        <div class="field-group">
+          <label>난이도 및 문장 최대 글자 수 지정</label>
+          <div class="radio-pills" id="difficultyGroup" role="radiogroup" aria-label="난이도">
+            <button type="button" class="pill-btn" data-difficulty="초등 심화">초등 심화</button>
+            <button type="button" class="pill-btn selected" data-difficulty="중등 기본">중등 기본</button>
+            <button type="button" class="pill-btn" data-difficulty="중등 심화">중등 심화</button>
+            <button type="button" class="pill-btn" data-difficulty="고등">고등</button>
+          </div>
+          <div class="count-row">
+            <label for="maxLengthInput" style="margin:0; font-size:0.88rem;">이 난이도 최대 글자 수:</label>
+            <input type="number" id="maxLengthInput" class="count-input" min="12" max="100" step="1" value="35" aria-label="난이도별 최대 글자 수">
+            <span class="hint-text" style="margin:0;">자 이내 (공백 포함, 12~100자)</span>
+            <button type="button" id="btnResetMaxLen" class="btn-sm" style="padding:4px 8px; font-size:0.78rem;">기본값</button>
+          </div>
+          <p id="difficultyDesc" class="hint-text">단문·간단한 이어진문장, 핵심 맞춤법·띄어쓰기 요소 1~2개</p>
+        </div>
+
+        <!-- 문항 수 선택 -->
+        <div class="field-group">
+          <label for="countInput">문항 수 선택 (처리 가능 범위: 1 ~ 30문항)</label>
+          <div class="radio-pills" id="presetCountGroup">
+            <button type="button" class="pill-btn" data-count="5">5문항</button>
+            <button type="button" class="pill-btn selected" data-count="10">10문항</button>
+            <button type="button" class="pill-btn" data-count="15">15문항</button>
+            <button type="button" class="pill-btn" data-count="20">20문항</button>
+          </div>
+          <div class="count-row">
+            <span>직접 입력:</span>
+            <input type="number" id="countInput" class="count-input" min="1" max="30" step="1" value="10" aria-label="문항 수 직접 입력">
+            <span class="hint-text">문항 (양의 정수, 1~30)</span>
+          </div>
+        </div>
+
+        <!-- 사용할 Gemini 무료 모델 선택 -->
+        <div class="field-group">
+          <label for="modelSelect">Google Gemini 무료 API 모델 선택</label>
+          <select id="modelSelect" class="provider-select" aria-label="사용할 Gemini 무료 API 모델 선택">
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (확실한 무료 · 최고속 1~3초 권장)</option>
+          </select>
+          <p id="providerKeyHint" class="hint-text">확실한 무료 등급(Free of charge) 모델만 표시됩니다. 과부하(503) 시 다음 무료 모델로 즉시 우회합니다.</p>
+        </div>
+      </div>
+
+      <div class="generate-bar">
+        <div class="hint-text">
+          출제 기준: 혼동 표기(되·돼, 안·않 등), 조사·의존명사 띄어쓰기, 어미 활용, 자주 틀리는 어휘를 지정한 최대 글자 수 이내로 빠르게 출제합니다.
+        </div>
+        <button type="button" id="btnGenerateSet" class="btn-primary" style="font-size: 1rem; padding: 11px 22px;">
+          새 문제 만들기
+        </button>
+      </div>
+    </section>
+
+    <!-- 2단계 & 3단계: 문항 확인·재생성 및 인쇄 미리보기 -->
+    <section class="workspace-card" aria-label="문항 확인 및 인쇄 미리보기">
+      <div class="tabs-bar no-print">
+        <div class="tab-buttons" role="tablist">
+          <button type="button" class="tab-btn active" data-tab="manage" role="tab" aria-selected="true">2. 문항 확인·개별 재생성</button>
+          <button type="button" class="tab-btn" data-tab="listen" role="tab" aria-selected="false">🎧 음성 듣기·공유 화면</button>
+          <button type="button" class="tab-btn" data-tab="teacher" role="tab" aria-selected="false">교사용 낭독지 미리보기</button>
+          <button type="button" class="tab-btn" data-tab="student" role="tab" aria-selected="false">학생용 받아쓰기 용지 미리보기</button>
+          <button type="button" class="tab-btn" data-tab="answer" role="tab" aria-selected="false">정답·해설지 미리보기</button>
+        </div>
+        <div class="print-actions">
+          <button type="button" id="btnPrintTeacher" class="btn-accent btn-sm">교사용 낭독지 인쇄/PDF</button>
+          <button type="button" id="btnPrintStudent" class="btn-accent btn-sm">학생용 용지 인쇄/PDF</button>
+          <button type="button" id="btnPrintAnswer" class="btn-accent btn-sm">정답·해설지 인쇄/PDF</button>
+        </div>
+      </div>
+
+      <!-- 문제 묶음 요약 헤더 (화면 전용) -->
+      <div id="currentSetSummary" class="no-print" style="margin-bottom: 14px; font-size: 0.92rem; color: var(--text-sub); display: none;"></div>
+
+      <!-- 음성 낭독(TTS) 및 공유 링크 컨트롤 바 -->
+      <div id="ttsToolbar" class="tts-toolbar no-print" style="display: none;">
+        <div class="tts-controls-left">
+          <button type="button" id="btnPlayAllTts" class="btn-primary btn-sm">▶ 전체 문제 연속 읽어주기</button>
+          <button type="button" id="btnStopTts" class="btn-danger btn-sm" disabled>⏹ 읽기 정지</button>
+          <label style="font-size:0.84rem; font-weight:700;">속도:
+            <select id="ttsRateSelect" class="tts-select" aria-label="낭독 속도">
+              <option value="0.75">천천히 (0.75x)</option>
+              <option value="0.88" selected>받아쓰기 권장 (0.88x)</option>
+              <option value="1.0">보통 (1.0x)</option>
+            </select>
+          </label>
+          <label style="font-size:0.84rem; font-weight:700;">문항당 반복:
+            <select id="ttsRepeatSelect" class="tts-select" aria-label="문항당 반복 횟수">
+              <option value="1">1회 읽기</option>
+              <option value="2" selected>2회 연속 읽기</option>
+              <option value="3">3회 연속 읽기</option>
+            </select>
+          </label>
+          <label style="font-size:0.84rem; font-weight:700;">문항 간격:
+            <select id="ttsPauseSelect" class="tts-select" aria-label="문항 간 대기 시간">
+              <option value="3">3초 대기</option>
+              <option value="5" selected>5초 대기</option>
+              <option value="8">8초 대기</option>
+            </select>
+          </label>
+        </div>
+        <div class="tts-controls-right">
+          <span id="ttsPlayingStatus" style="font-size:0.85rem; font-weight:700; color:var(--primary);"></span>
+          <button type="button" id="btnCopyShareLink" class="btn-accent btn-sm">🔗 듣기 공유 주소(URL) 만들기</button>
+          <button type="button" id="btnExitSharedMode" class="btn-sm" style="display:none;">교사용 전체 화면 보기</button>
+        </div>
+      </div>
+
+      <!-- 생성된 공유 URL 표시 상자 -->
+      <div id="shareUrlBox" class="share-url-box no-print">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:8px;">
+          <strong style="font-size:0.9rem; color:var(--primary);">공유용 듣기 전용 주소 (이 주소를 보내면 상대방은 정답이 가려진 듣기 화면으로 열립니다)</strong>
+          <button type="button" id="btnCloseShareBox" class="btn-sm" style="padding:3px 8px;">닫기</button>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="shareUrlInput" class="share-url-input" readonly aria-label="공유 링크 주소">
+          <button type="button" id="btnCopyUrlInput" class="btn-primary btn-sm">주소 복사</button>
+        </div>
+        <p class="hint-text" style="margin-top:6px;">
+          ※ 내 컴퓨터 파일(<code>file://</code>) 상태에서는 같은 컴퓨터의 브라우저에서만 열립니다. 이 HTML 파일을 GitHub Pages·Netlify·Cloudflare Pages 같은 무료 웹 호스팅에 올려두면 학생·학부모가 스마트폰에서도 링크 하나로 바로 들을 수 있습니다. (API 키는 링크에 절대 포함되지 않습니다.)
+        </p>
+      </div>
+
+      <!-- 빈 상태 안내 -->
+      <div id="emptyWorkspace" class="empty-state no-print">
+        <p style="font-size: 1.08rem; font-weight: 700; color: var(--text); margin-bottom: 6px;">아직 생성된 받아쓰기 문제가 없습니다.</p>
+        <p style="margin: 0;">위에서 난이도·최대 글자 수·문항 수를 선택한 뒤 <strong>[새 문제 만들기]</strong> 버튼을 눌러 문제를 생성해 보세요.</p>
+      </div>
+
+      <!-- 탭 1: 문항 확인 및 개별 재생성 (화면 전용) -->
+      <div id="tabManage" class="no-print" style="display: none;">
+        <div id="manageItemsList"></div>
+      </div>
+
+      <!-- 탭 1-2: 학생용 음성 듣기 전용 화면 (공유 링크 접속 시 기본 화면) -->
+      <div id="tabListen" class="no-print" style="display: none;">
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; padding:12px 14px; background:var(--surface-sub); border:1px solid var(--border); border-radius:8px;">
+          <div>
+            <strong style="font-size:1rem;">🎧 받아쓰기 음성 듣기 화면 (랜덤 순서 배치 적용됨)</strong>
+            <div class="hint-text">문제 순서가 랜덤으로 재배치되었으며 <strong>[정답·해설지 미리보기]</strong>도 동일한 순서로 맞춰져 있습니다.</div>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" id="btnShuffleListenOrder" class="btn-sm">🔀 문제 순서 다시 섞기</button>
+            <button type="button" id="btnToggleListenAnswers" class="btn-sm">정답 및 해설 펼쳐보기</button>
+          </div>
+        </div>
+        <div id="listenItemsList"></div>
+      </div>
+
+      <!-- 탭 2: 교사용 낭독지 (A4 인쇄 겸용) -->
+      <div id="sheetTeacher" class="print-sheet" aria-label="교사용 낭독지">
+        <div class="sheet-header">
+          <div>
+            <h2 class="sheet-title" id="teacherSheetTitle">국어 받아쓰기 — 교사용 낭독지</h2>
+            <p class="sheet-submeta" id="teacherSheetMeta"></p>
+          </div>
+          <div style="font-size: 0.9rem; color: #334155;">
+            ※ 각 문항을 자연스러운 속도로 2~3회 읽어 주세요.
+          </div>
+        </div>
+        <div id="teacherItemsContainer"></div>
+      </div>
+
+      <!-- 탭 3: 학생용 받아쓰기 용지 (A4 인쇄 겸용 - 이름/점수만 표시, 정답 절대 미노출) -->
+      <div id="sheetStudent" class="print-sheet" aria-label="학생용 받아쓰기 용지">
+        <div class="sheet-header">
+          <div>
+            <h2 class="sheet-title" id="studentSheetTitle">국어 받아쓰기 평가 용지</h2>
+            <p class="sheet-submeta" id="studentSheetMeta">선생님이 읽어 주시는 문장을 띄어쓰기와 맞춤법에 유의하여 바르게 적으시오.</p>
+          </div>
+          <table class="student-info-box">
+            <tbody>
+              <tr>
+                <td><strong>이 름</strong></td>
+                <td style="min-width: 110px;">&nbsp;</td>
+                <td><strong>점 수</strong></td>
+                <td style="min-width: 85px; text-align: right;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / <span id="studentTotalScore">10</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="studentItemsContainer"></div>
+      </div>
+
+      <!-- 탭 4: 정답·해설지 (A4 인쇄 겸용) -->
+      <div id="sheetAnswer" class="print-sheet" aria-label="정답 및 해설지">
+        <div class="sheet-header">
+          <div>
+            <h2 class="sheet-title" id="answerSheetTitle">국어 받아쓰기 — 정답 및 해설지</h2>
+            <p class="sheet-submeta" id="answerSheetMeta"></p>
+          </div>
+          <div style="font-size: 0.88rem; color: #334155;">
+            ※ 정답 문장은 교사용 낭독 문장과 동일합니다.
+          </div>
+        </div>
+        <div id="answerItemsContainer"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var STORAGE_STATE_KEY = "korean_dictation_gemini_fast_state_v1";
+      var STORAGE_KEYS_KEY = "korean_dictation_gemini_apikey_v1";
+      var LEGACY_KEYS_KEY = "korean_dictation_serverless_apikeys_v1";
+      var MAX_RETRIES = 1;
+
+      var DEFAULT_MAX_LENGTHS = {
+        "초등 심화": 25,
+        "중등 기본": 35,
+        "중등 심화": 48,
+        "고등": 65
+      };
+
+      var DIFFICULTY_INFO = {
+        "초등 심화": "초등 고학년(4~6학년) 수준의 명료한 문장, 자주 틀리는 맞춤법·띄어쓰기 요소 1~2개",
+        "중등 기본": "단문·간단한 이어진문장, 핵심 맞춤법·띄어쓰기 요소 1~2개",
+        "중등 심화": "이어진문장·안은문장, 헷갈리기 쉬운 표기·의존명사·어미 활용 요소 2개 내외",
+        "고등": "복문 구조와 교양 어휘, 복합 맞춤법·띄어쓰기·어법 판단 요소 2~3개"
+      };
+
+      var DIFFICULTY_SPECS = {
+        "초등 심화": {
+          minLen: 10,
+          defaultMaxLen: 25,
+          structureGuide: "초등 4~6학년 수준의 명료한 단문, 일상·학교·자연 소재, 필수 맞춤법(되/돼, 안/않, 며칠, 금세, 기초 띄어쓰기) 1~2개",
+          example: "비 온 뒤에 무지개가 반짝거리는 하늘을 보았다."
+        },
+        "중등 기본": {
+          minLen: 12,
+          defaultMaxLen: 35,
+          structureGuide: "중학교 기본 수준의 자연스러운 문장, 학교·독서·일상 소재, 맞춤법·띄어쓰기 요소 1~2개",
+          example: "며칠 동안 준비한 발표를 무사히 마쳤다."
+        },
+        "중등 심화": {
+          minLen: 16,
+          defaultMaxLen: 48,
+          structureGuide: "중학교 심화 수준의 이어진문장·안은문장, 교양 소재, 의존명사 띄어쓰기·어미·부사 표기 요소 2개",
+          example: "친구의 설명을 듣고 나니 오해가 금세 풀렸다."
+        },
+        "고등": {
+          minLen: 20,
+          defaultMaxLen: 65,
+          structureGuide: "고등학교 수준의 복문과 교양 어휘(생소한 전문용어·고유명사 제외), 복합 맞춤법·띄어쓰기·어법 요소 2~3개",
+          example: "문제의 원인을 밝혀내지 않고서는 같은 실수를 되풀이할 수밖에 없다."
+        }
+      };
+
+      var FORBIDDEN_EXAMPLES = {
+        "비온뒤에무지개가반짝거리는하늘을보았다": true,
+        "며칠동안준비한발표를무사히마쳤다": true,
+        "친구의설명을듣고나니오해가금세풀렸다": true,
+        "문제의원인을밝혀내지않고서는같은실수를되풀이할수밖에없다": true
+      };
+
+      // Google AI Studio 공식 무료 등급(Free of charge) 확인 완료 모델만 등록 (빠른 모델 순)
+      var GEMINI_FREE_MODELS = [
+        { id: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite (확실한 무료 · 최고속 1~3초 권장)", disableThinking: true },
+        { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash (확실한 무료 · 빠른 표준)", disableThinking: true },
+        { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash-Lite (확실한 무료 · 고속 경량)", disableThinking: false },
+        { id: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash-Lite (확실한 무료 · 초경량)", disableThinking: false },
+        { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash (확실한 무료 · 최신 고성능)", disableThinking: false },
+        { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash (확실한 무료 · 안정)", disableThinking: false }
+      ];
+
+      var geminiApiKey = "";
+
+      var appState = {
+        selected_model: "gemini-2.5-flash-lite",
+        remember_keys: true,
+        last_difficulty: "중등 기본",
+        last_count: 10,
+        max_lengths: JSON.parse(JSON.stringify(DEFAULT_MAX_LENGTHS)),
+        registered: false,
+        current_set: null,
+        saved_sets: [],
+        history_sentences: [],
+        history_count: 0
+      };
+
+      var uiState = {
+        difficulty: "중등 기본",
+        count: 10,
+        activeTab: "manage",
+        busy: false,
+        regeneratingNumber: null,
+        confirmDeleteSetId: null,
+        confirmDeleteKey: false,
+        speakingItemNumber: null,
+        isPlayingAll: false,
+        showListenAnswers: false,
+        sharedListenMode: false
+      };
+
+      var ttsTimerId = null;
+      var ttsSessionToken = 0;
+
+      function makeAppError(code, message, status) {
+        var err = new Error(message);
+        err.isAppError = true;
+        err.code = code;
+        err.status = status || 400;
+        return err;
+      }
+
+      function sleepMs(ms) {
+        var delay = typeof window.__testFastRetryDelay === "number" ? window.__testFastRetryDelay : ms;
+        return new Promise(function (resolve) {
+          setTimeout(resolve, delay);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str == null ? "" : str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function redactSecrets(text) {
+        var out = String(text == null ? "" : text);
+        if (geminiApiKey && geminiApiKey.length >= 4) {
+          out = out.split(geminiApiKey).join("[REDACTED]");
+        }
+        out = out.replace(/AIza[A-Za-z0-9_\-]{8,}/g, "[REDACTED]");
+        return out;
+      }
+
+      function normalizeSentence(text) {
+        return String(text || "").trim().replace(/[\s\.,\?!~'"“”‘’\(\)\[\]\-\·:;/]+/g, "");
+      }
+
+      function isAllowedGeminiModel(modelId) {
+        for (var i = 0; i < GEMINI_FREE_MODELS.length; i++) {
+          if (GEMINI_FREE_MODELS[i].id === modelId) return true;
+        }
+        return false;
+      }
+
+      function getModelConfig(modelId) {
+        for (var i = 0; i < GEMINI_FREE_MODELS.length; i++) {
+          if (GEMINI_FREE_MODELS[i].id === modelId) return GEMINI_FREE_MODELS[i];
+        }
+        return GEMINI_FREE_MODELS[0];
+      }
+
+      function getCandidateFreeModels(primaryModel) {
+        var list = [primaryModel];
+        for (var i = 0; i < GEMINI_FREE_MODELS.length; i++) {
+          var mid = GEMINI_FREE_MODELS[i].id;
+          if (list.indexOf(mid) === -1) {
+            list.push(mid);
+          }
+        }
+        return list;
+      }
+
+      function getMaxLenForDifficulty(diff) {
+        var val = appState.max_lengths && appState.max_lengths[diff];
+        var parsed = parseInt(val, 10);
+        if (!isNaN(parsed) && parsed >= 12 && parsed <= 100) {
+          return parsed;
+        }
+        return DEFAULT_MAX_LENGTHS[diff] || 35;
+      }
+
+      // 불필요한 전체 재호출을 막기 위해 출제 포인트가 문장 어구를 누락했을 경우 자동 보정하고,
+      // 개수·필수값·중복·글자수 초과만 빠르고 엄격하게 검증
+      function validateAndNormalizeItems(rawItems, expectedCount, maxChars, existingSentences, historySentences) {
+        if (!Array.isArray(rawItems)) {
+          throw makeAppError("VALIDATION_ERROR", "AI 응답 형식이 올바르지 않습니다.");
+        }
+        if (rawItems.length !== expectedCount) {
+          throw makeAppError("VALIDATION_ERROR", "요청한 문항 수(" + expectedCount + "개)와 생성된 문항 수(" + rawItems.length + "개)가 일치하지 않습니다.");
+        }
+
+        var seenNorms = {};
+        var exList = existingSentences || [];
+        for (var eIdx = 0; eIdx < exList.length; eIdx++) {
+          var ns = normalizeSentence(exList[eIdx]);
+          if (ns) seenNorms[ns] = true;
+        }
+
+        var histNorms = {};
+        var hList = historySentences || [];
+        for (var hIdx = 0; hIdx < hList.length; hIdx++) {
+          var hs = normalizeSentence(hList[hIdx]);
+          if (hs) histNorms[hs] = true;
+        }
+
+        var validated = [];
+        for (var i = 0; i < rawItems.length; i++) {
+          var idx = i + 1;
+          var item = rawItems[i];
+          if (!item || typeof item !== "object") {
+            throw makeAppError("VALIDATION_ERROR", idx + "번 문항 형식이 올바르지 않습니다.");
+          }
+          var sentence = String(item.sentence || "").trim();
+          var focus = String(item.focus || "").trim();
+          var explanation = String(item.explanation || "").trim();
+
+          if (!sentence || !focus || !explanation) {
+            throw makeAppError("VALIDATION_ERROR", idx + "번 문항에 필수 항목이 누락되었습니다.");
+          }
+          var lastChar = sentence.charAt(sentence.length - 1);
+          if (lastChar !== "." && lastChar !== "?" && lastChar !== "!") {
+            sentence += ".";
+          }
+
+          if (sentence.length < 6) {
+            throw makeAppError("VALIDATION_ERROR", idx + "번 문장이 너무 짧습니다.");
+          }
+          // 사용자가 지정한 최대 글자 수 검증 (여유 오차 +3자까지 허용, 초과 시 재요청)
+          if (sentence.length > maxChars + 3) {
+            throw makeAppError("VALIDATION_ERROR", idx + "번 문장(" + sentence.length + "자)이 지정한 최대 글자 수(" + maxChars + "자)를 초과했습니다.");
+          }
+
+          var norm = normalizeSentence(sentence);
+          if (FORBIDDEN_EXAMPLES[norm]) {
+            throw makeAppError("VALIDATION_ERROR", idx + "번 문항이 예시 문장과 동일합니다.");
+          }
+          if (seenNorms[norm]) {
+            throw makeAppError("VALIDATION_ERROR", idx + "번 문항이 현재 묶음 내 다른 문장과 중복됩니다.");
+          }
+          if (histNorms[norm]) {
+            throw makeAppError("VALIDATION_ERROR", idx + "번 문항이 이전 생성 이력과 중복됩니다.");
+          }
+
+          // 규정 번호가 들어 있으면 제거하여 불필요한 재호출 지연 방지
+          explanation = explanation.replace(/제\s*\d+\s*(항|조|호)에\s*따라\s*/g, "").replace(/제\s*\d+\s*(항|조|호)/g, "").trim();
+
+          seenNorms[norm] = true;
+          validated.push({
+            number: idx,
+            sentence: sentence,
+            focus: focus,
+            explanation: explanation
+          });
+        }
+        return validated;
+      }
+
+      function extractJsonPayload(rawText) {
+        var text = String(rawText || "").trim();
+        if (!text) {
+          throw makeAppError("VALIDATION_ERROR", "AI 응답이 비어 있습니다.");
+        }
+        var fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (fenceMatch && fenceMatch[1]) {
+          text = fenceMatch[1].trim();
+        } else {
+          var firstBrace = text.indexOf("{");
+          var lastBrace = text.lastIndexOf("}");
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            text = text.slice(firstBrace, lastBrace + 1);
+          }
+        }
+        var parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch (e) {
+          throw makeAppError("VALIDATION_ERROR", "AI가 올바른 JSON 형식으로 응답하지 않았습니다.");
+        }
+        if (Array.isArray(parsed)) {
+          return { items: parsed };
+        }
+        if (!parsed || typeof parsed !== "object" || !("items" in parsed)) {
+          throw makeAppError("VALIDATION_ERROR", "AI 응답에 'items' 문항 목록이 없습니다.");
+        }
+        return parsed;
+      }
+
+      // 초고속 생성을 위해 불필요한 장문 프롬프트를 압축하고 최대 글자 수 조건을 명확히 전달
+      function buildFastPrompts(difficulty, count, maxChars, avoidSentences, retryReason) {
+        var spec = DIFFICULTY_SPECS[difficulty] || DIFFICULTY_SPECS["중등 기본"];
+        var minChars = Math.min(spec.minLen, Math.max(8, maxChars - 10));
+        var avoidSample = (avoidSentences || []).slice(-18);
+        var avoidText = avoidSample.length ? "\n중복 금지 문장:\n- " + avoidSample.join("\n- ") : "";
+
+        var systemPrompt =
+          "한국어 받아쓰기 출제 교사입니다. 논란 없는 표준어·맞춤법 문장만 출제하며, 규정 번호(제00항)는 쓰지 마세요. 오직 JSON만 출력하세요.";
+
+        var userPrompt =
+          "난이도 [" + difficulty + "] 국어 받아쓰기 문항을 정확히 " + count + "개 생성하세요.\n" +
+          "- 문장 길이: 모든 문장(sentence)은 공백·마침표 포함 반드시 " + minChars + "자 이상 " + maxChars + "자 이하로 작성 (절대 " + maxChars + "자를 넘기지 말 것)\n" +
+          "- 기준: " + spec.structureGuide + "\n" +
+          "- 소재와 맞춤법 포인트(되/돼, 안/않, 며칠, 금세, 의존명사 띄어쓰기, 부사 -이/-히, 어미 활용 등)가 겹치지 않게 분산\n" +
+          "- focus: 문장 속 실제 핵심 어구 + (출제 포인트)\n" +
+          "- explanation: 핵심 원리 1문장(45자 이내로 간결하게)" +
+          avoidText;
+
+        if (retryReason) {
+          userPrompt += "\n주의(직전 오류 보정): " + retryReason;
+        }
+
+        userPrompt +=
+          '\n출력 형식: {"items":[{"sentence":"...","focus":"...","explanation":"..."}]}';
+
+        return { systemPrompt: systemPrompt, userPrompt: userPrompt };
+      }
+
+      // 단일 Gemini 무료 모델 1회 초고속 호출 (thinkingBudget: 0 적용으로 추론 지연 제거)
+      function callGeminiSingleModelOnce(apiKey, systemPrompt, userPrompt, selectedModel, skipThinkingConfig) {
+        if (typeof window.__customAiCaller === "function") {
+          return Promise.resolve().then(function () {
+            return window.__customAiCaller("gemini", apiKey, systemPrompt, userPrompt, selectedModel);
+          });
+        }
+
+        var cleanedKey = String(apiKey || "").trim();
+        var modelCfg = getModelConfig(selectedModel);
+        var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(selectedModel) + ":generateContent?key=" + encodeURIComponent(cleanedKey);
+
+        var genConfig = {
+          temperature: 0.65,
+          responseMimeType: "application/json"
+        };
+        if (modelCfg.disableThinking && !skipThinkingConfig) {
+          genConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+
+        var bodyObj = {
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: genConfig
+        };
+
+        var timeoutId = null;
+        var timeoutPromise = new Promise(function (_, reject) {
+          timeoutId = setTimeout(function () {
+            reject(makeAppError("TIMEOUT_ERROR", "Gemini (" + selectedModel + ") 응답이 지연되어 다음 무료 모델로 즉시 전환합니다.", 504));
+          }, 15000);
+        });
+
+        return Promise.race([
+          fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bodyObj)
+          }),
+          timeoutPromise
+        ])
+          .then(function (resp) {
+            if (timeoutId) clearTimeout(timeoutId);
+            return resp.text().then(function (rawBody) {
+              if (!resp.ok) {
+                var status = resp.status;
+                var lower = (rawBody || "").toLowerCase();
+
+                // 만약 특정 모델이 thinkingConfig 필드를 지원하지 않아 400을 반환하면 즉시 필드 없이 재호출
+                if (status === 400 && !skipThinkingConfig && lower.indexOf("thinking") !== -1) {
+                  return callGeminiSingleModelOnce(apiKey, systemPrompt, userPrompt, selectedModel, true);
+                }
+
+                if (status === 401 || status === 403 || lower.indexOf("api_key_invalid") !== -1 || lower.indexOf("invalid api key") !== -1) {
+                  throw makeAppError("AUTH_ERROR", "Google Gemini API 키 인증에 실패했습니다. 등록한 API 키가 정확한지 확인해 주세요.", status);
+                }
+                if (status === 503 || status === 502 || status === 500 || status === 504 || status === 404 || lower.indexOf("overloaded") !== -1 || lower.indexOf("unavailable") !== -1) {
+                  throw makeAppError(
+                    "SERVER_OVERLOADED",
+                    "Google Gemini (" + selectedModel + ") 서버가 현재 혼잡(HTTP " + status + ")합니다.",
+                    status
+                  );
+                }
+                if (status === 429 || lower.indexOf("quota") !== -1 || lower.indexOf("rate_limit") !== -1 || lower.indexOf("resource_exhausted") !== -1) {
+                  throw makeAppError(
+                    "QUOTA_ERROR",
+                    "Google Gemini (" + selectedModel + ")의 분당/일일 무료 호출 한도에 도달했습니다.",
+                    status
+                  );
+                }
+                throw makeAppError("SERVER_ERROR", "Google Gemini 서버 오류(HTTP " + status + ")가 발생했습니다.", status);
+              }
+
+              var data;
+              try {
+                data = JSON.parse(rawBody);
+              } catch (e) {
+                throw makeAppError("VALIDATION_ERROR", "Gemini 응답을 해석할 수 없습니다.");
+              }
+
+              var cands = data.candidates || [];
+              if (cands.length && cands[0].content && Array.isArray(cands[0].content.parts)) {
+                var gTexts = [];
+                for (var i = 0; i < cands[0].content.parts.length; i++) {
+                  if (cands[0].content.parts[i].text) gTexts.push(cands[0].content.parts[i].text);
+                }
+                if (gTexts.length) return gTexts.join("\n");
+              }
+              throw makeAppError("VALIDATION_ERROR", "Gemini 응답에서 생성된 텍스트를 찾을 수 없습니다.");
+            });
+          })
+          .catch(function (err) {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (err && err.isAppError) throw err;
+            var rawMsg = String((err && err.message) || "");
+            if ((err && err.name === "AbortError") || rawMsg.indexOf("aborted") !== -1) {
+              throw makeAppError("TIMEOUT_ERROR", "응답 대기 시간이 초과되어 다음 무료 모델로 재시도합니다.", 504);
+            }
+            throw makeAppError("NETWORK_ERROR", "인터넷 연결에 실패했습니다. 컴퓨터의 인터넷 연결 상태를 확인해 주세요.");
+          });
+      }
+
+      // 503 과부하 / 타임아웃 / 모델별 한도 초과 시 대기 시간을 최소화(250ms)하여 다음 무료 Gemini 모델로 즉시 우회
+      function callGeminiWithFastFailover(apiKey, systemPrompt, userPrompt, preferredModel, onProgress) {
+        var cleanedKey = String(apiKey || "").trim();
+        if (!cleanedKey) {
+          return Promise.reject(makeAppError("NO_KEY", "Google Gemini 무료 API 키가 등록되어 있지 않습니다. 우측 상단 [Gemini API 키 설정]에서 키를 먼저 등록해 주세요."));
+        }
+        var startModel = String(preferredModel || "gemini-2.5-flash-lite").trim();
+        if (!isAllowedGeminiModel(startModel)) {
+          return Promise.reject(makeAppError("INVALID_INPUT", "유료 전용 모델('" + startModel + "')은 사용할 수 없습니다. 확실한 무료 Gemini 모델만 선택해 주세요."));
+        }
+
+        var candidateModels = getCandidateFreeModels(startModel);
+
+        function tryModelIndex(mIdx) {
+          var currentModel = candidateModels[mIdx];
+          return callGeminiSingleModelOnce(cleanedKey, systemPrompt, userPrompt, currentModel, false)
+            .then(function (rawText) {
+              return { rawText: rawText, usedModel: currentModel };
+            })
+            .catch(function (err) {
+              if (!err || err.code === "AUTH_ERROR" || err.code === "NO_KEY" || err.code === "NETWORK_ERROR" || err.code === "INVALID_INPUT") {
+                throw err;
+              }
+              var canTryNextModel = (err.code === "SERVER_OVERLOADED" || err.code === "QUOTA_ERROR" || err.code === "TIMEOUT_ERROR") && (mIdx + 1 < candidateModels.length);
+              if (canTryNextModel) {
+                var nextModel = candidateModels[mIdx + 1];
+                if (typeof onProgress === "function") {
+                  onProgress(currentModel + " 응답 지연/혼잡으로 즉시 " + nextModel + " 무료 모델로 전환해 생성 중입니다...");
+                }
+                return sleepMs(250).then(function () {
+                  return tryModelIndex(mIdx + 1);
+                });
+              }
+              throw err;
+            });
+        }
+
+        return tryModelIndex(0);
+      }
+
+      function saveToBrowserStorage() {
+        try {
+          var safeState = {
+            selected_model: appState.selected_model,
+            remember_keys: appState.remember_keys,
+            last_difficulty: uiState.difficulty,
+            last_count: uiState.count,
+            max_lengths: appState.max_lengths,
+            current_set: appState.current_set,
+            saved_sets: (appState.saved_sets || []).slice(0, 50),
+            history_sentences: (appState.history_sentences || []).slice(-500)
+          };
+          localStorage.setItem(STORAGE_STATE_KEY, JSON.stringify(safeState));
+          if (appState.remember_keys && geminiApiKey) {
+            localStorage.setItem(STORAGE_KEYS_KEY, geminiApiKey);
+          } else {
+            localStorage.removeItem(STORAGE_KEYS_KEY);
+          }
+        } catch (e) {
+          // 무시
+        }
+      }
+
+      function loadFromBrowserStorage() {
+        try {
+          var savedKey = localStorage.getItem(STORAGE_KEYS_KEY);
+          if (savedKey && savedKey.trim()) {
+            geminiApiKey = savedKey.trim();
+          } else {
+            // 이전 버전에서 저장한 Gemini 키가 있으면 자동 마이그레이션
+            var legacyRaw = localStorage.getItem(LEGACY_KEYS_KEY);
+            if (legacyRaw) {
+              var legacyObj = JSON.parse(legacyRaw);
+              if (legacyObj && typeof legacyObj.gemini === "string" && legacyObj.gemini.trim()) {
+                geminiApiKey = legacyObj.gemini.trim();
+              }
+            }
+          }
+
+          var rawState = localStorage.getItem(STORAGE_STATE_KEY);
+          if (rawState) {
+            var parsed = JSON.parse(rawState);
+            if (parsed && typeof parsed === "object") {
+              if (parsed.selected_model && isAllowedGeminiModel(parsed.selected_model)) {
+                appState.selected_model = parsed.selected_model;
+              }
+              if (typeof parsed.remember_keys === "boolean") {
+                appState.remember_keys = parsed.remember_keys;
+              }
+              if (parsed.max_lengths && typeof parsed.max_lengths === "object") {
+                for (var dKey in DEFAULT_MAX_LENGTHS) {
+                  var mVal = parseInt(parsed.max_lengths[dKey], 10);
+                  if (!isNaN(mVal) && mVal >= 12 && mVal <= 100) {
+                    appState.max_lengths[dKey] = mVal;
+                  }
+                }
+              }
+              if (parsed.last_difficulty && DIFFICULTY_INFO[parsed.last_difficulty]) {
+                appState.last_difficulty = parsed.last_difficulty;
+                uiState.difficulty = parsed.last_difficulty;
+              }
+              if (typeof parsed.last_count === "number" && parsed.last_count >= 1 && parsed.last_count <= 30) {
+                appState.last_count = parsed.last_count;
+                uiState.count = parsed.last_count;
+              }
+              if (parsed.current_set && Array.isArray(parsed.current_set.items)) {
+                appState.current_set = parsed.current_set;
+              }
+              if (Array.isArray(parsed.saved_sets)) {
+                appState.saved_sets = parsed.saved_sets;
+              }
+              if (Array.isArray(parsed.history_sentences)) {
+                appState.history_sentences = parsed.history_sentences;
+              }
+            }
+          }
+        } catch (e) {
+          // 무시
+        }
+        syncRegistrationFlags();
+      }
+
+      function syncRegistrationFlags() {
+        appState.registered = Boolean(geminiApiKey && geminiApiKey.trim());
+        appState.history_count = (appState.history_sentences || []).length;
+      }
+
+      function formatNow() {
+        var d = new Date();
+        var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+        return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " +
+          pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+      }
+
+      function generateItemsWithRetry(model, difficulty, count, maxChars, existingSentences, historySentences, onProgress) {
+        if (!geminiApiKey) {
+          return Promise.reject(makeAppError("NO_KEY", "Google Gemini 무료 API 키가 등록되어 있지 않습니다. 우측 상단 [Gemini API 키 설정]에서 키를 먼저 등록해 주세요."));
+        }
+        if (!isAllowedGeminiModel(model)) {
+          return Promise.reject(makeAppError("INVALID_INPUT", "유료 전용 모델('" + model + "')은 사용할 수 없습니다. 확실한 무료 Gemini 모델만 선택해 주세요."));
+        }
+
+        var avoidList = (historySentences || []).concat(existingSentences || []);
+        var activeModelToUse = model;
+
+        function attemptLoop(attemptIndex, lastReason) {
+          var prompts = buildFastPrompts(difficulty, count, maxChars, avoidList, lastReason);
+          return callGeminiWithFastFailover(geminiApiKey, prompts.systemPrompt, prompts.userPrompt, activeModelToUse, onProgress)
+            .then(function (callRes) {
+              activeModelToUse = callRes.usedModel || activeModelToUse;
+              var payload = extractJsonPayload(callRes.rawText);
+              var items = validateAndNormalizeItems(payload.items, count, maxChars, existingSentences, historySentences);
+              return { items: items, usedModel: activeModelToUse };
+            })
+            .catch(function (err) {
+              if (err && err.code === "VALIDATION_ERROR" && attemptIndex < MAX_RETRIES) {
+                return attemptLoop(attemptIndex + 1, err.message);
+              }
+              throw err;
+            });
+        }
+
+        return attemptLoop(0, "");
+      }
+
+      function showBanner(type, message) {
+        var banner = document.getElementById("statusBanner");
+        var msgEl = document.getElementById("statusMessage");
+        banner.className = "status-banner no-print show " + type;
+        msgEl.textContent = redactSecrets(message);
+      }
+
+      function hideBanner() {
+        var banner = document.getElementById("statusBanner");
+        banner.className = "status-banner no-print";
+      }
+
+      function setBusy(isBusy, regenNum) {
+        uiState.busy = isBusy;
+        uiState.regeneratingNumber = regenNum || null;
+        var genBtn = document.getElementById("btnGenerateSet");
+        if (genBtn) {
+          genBtn.disabled = isBusy;
+          genBtn.textContent = isBusy && !regenNum ? "초고속 문항 생성 중..." : "새 문제 만들기";
+        }
+        renderManageItems();
+      }
+
+      function renderHeaderAndSettings() {
+        syncRegistrationFlags();
+        var activeModel = appState.selected_model || "gemini-2.5-flash-lite";
+
+        var badge = document.getElementById("activeProviderBadge");
+        if (appState.registered) {
+          badge.className = "badge badge-ok";
+          badge.textContent = "Gemini 무료 API [" + activeModel + "] (키 등록됨)";
+        } else {
+          badge.className = "badge badge-none";
+          badge.textContent = "Gemini 무료 API [" + activeModel + "] (키 미등록)";
+        }
+
+        var chkRemember = document.getElementById("chkRememberKeyInBrowser");
+        if (chkRemember) {
+          chkRemember.checked = Boolean(appState.remember_keys);
+        }
+
+        var modelSelectEl = document.getElementById("modelSelect");
+        var modelOptsHtml = "";
+        for (var mIdx = 0; mIdx < GEMINI_FREE_MODELS.length; mIdx++) {
+          var mObj = GEMINI_FREE_MODELS[mIdx];
+          var isSelModel = (mObj.id === activeModel);
+          modelOptsHtml += '<option value="' + escapeHtml(mObj.id) + '"' + (isSelModel ? ' selected' : '') + '>' + escapeHtml(mObj.label) + '</option>';
+        }
+        modelSelectEl.innerHTML = modelOptsHtml;
+
+        var hintEl = document.getElementById("providerKeyHint");
+        if (appState.registered) {
+          hintEl.textContent = "선택된 무료 모델(" + activeModel + ")로 즉시 생성합니다. 혼잡(503) 시 대기 없이 다음 무료 Gemini 모델로 자동 전환합니다.";
+        } else {
+          hintEl.textContent = "⚠️ 아직 Gemini API 키가 등록되어 있지 않습니다. 우측 상단 [Gemini API 키 설정]에서 무료 키를 등록해 주세요.";
+        }
+
+        var container = document.getElementById("providerCardsContainer");
+        var html = '<div class="gemini-key-card">';
+        html += '  <div class="provider-head">';
+        html += '    <strong>Google Gemini 무료 API (Google AI Studio)</strong>';
+        html += '    <span class="badge ' + (appState.registered ? 'badge-ok' : 'badge-none') + '">' + (appState.registered ? 'API 키 등록됨' : '미등록') + '</span>';
+        html += '  </div>';
+        html += '  <div style="font-size:0.84rem; color:var(--text-sub); margin-bottom:10px;">확실한 무료 등급(Free of charge) 모델만 지원합니다. 기본 모델: <code>' + escapeHtml(activeModel) + '</code></div>';
+        html += '  <div class="key-input-row">';
+        html += '    <input type="password" id="keyInput_gemini" placeholder="' + (appState.registered ? '새 Gemini API 키로 교체할 때만 입력' : 'Google AI Studio 무료 API 키(AIza...) 입력') + '" autocomplete="off" aria-label="Google Gemini API 키 입력">';
+        html += '    <button type="button" class="btn-primary btn-sm" data-action="save-key">' + (appState.registered ? '키 교체' : '키 등록') + '</button>';
+        if (appState.registered) {
+          if (uiState.confirmDeleteKey) {
+            html += '    <button type="button" class="btn-danger btn-sm" data-action="confirm-delete-key">삭제 확인</button>';
+            html += '    <button type="button" class="btn-sm" data-action="cancel-delete-key">취소</button>';
+          } else {
+            html += '    <button type="button" class="btn-danger btn-sm" data-action="ask-delete-key">키 삭제</button>';
+          }
+        }
+        html += '  </div>';
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      function renderControls() {
+        var diffBtns = document.querySelectorAll("#difficultyGroup .pill-btn");
+        for (var i = 0; i < diffBtns.length; i++) {
+          var b = diffBtns[i];
+          var d = b.getAttribute("data-difficulty");
+          b.className = "pill-btn" + (d === uiState.difficulty ? " selected" : "");
+        }
+
+        var curMaxLen = getMaxLenForDifficulty(uiState.difficulty);
+        var maxLenInput = document.getElementById("maxLengthInput");
+        if (document.activeElement !== maxLenInput) {
+          maxLenInput.value = String(curMaxLen);
+        }
+
+        document.getElementById("difficultyDesc").textContent =
+          (DIFFICULTY_INFO[uiState.difficulty] || "") + " · 현재 최대 " + curMaxLen + "자 이내";
+
+        var countInput = document.getElementById("countInput");
+        if (document.activeElement !== countInput) {
+          countInput.value = String(uiState.count);
+        }
+        var presetBtns = document.querySelectorAll("#presetCountGroup .pill-btn");
+        for (var j = 0; j < presetBtns.length; j++) {
+          var pb = presetBtns[j];
+          var c = parseInt(pb.getAttribute("data-count"), 10);
+          pb.className = "pill-btn" + (c === uiState.count ? " selected" : "");
+        }
+      }
+
+      function renderSavedSets() {
+        var saved = appState.saved_sets || [];
+        document.getElementById("savedCountLabel").textContent = String(saved.length);
+        document.getElementById("historyCountLabel").textContent = String(appState.history_count || 0);
+
+        var container = document.getElementById("savedSetsContainer");
+        if (!saved.length) {
+          container.innerHTML = '<div style="padding:14px; color:var(--text-sub); font-size:0.9rem;">저장된 문제 묶음이 없습니다.</div>';
+          return;
+        }
+        var currentId = appState.current_set ? appState.current_set.id : "";
+        var html = "";
+        for (var i = 0; i < saved.length; i++) {
+          var s = saved[i];
+          var isCurrent = (s.id === currentId);
+          var isAskDel = (uiState.confirmDeleteSetId === s.id);
+          html += '<div class="saved-row">';
+          html += '  <div>';
+          html += '    <strong>' + escapeHtml(s.title) + '</strong> ';
+          if (isCurrent) {
+            html += '<span class="badge badge-ok">현재 열림</span>';
+          }
+          html += '    <div style="font-size:0.82rem; color:var(--text-sub);">생성: ' + escapeHtml(s.created_at) + ' | 모델: ' + escapeHtml(s.model || "gemini-2.5-flash-lite") + (s.max_chars ? ' | 최대 ' + escapeHtml(s.max_chars) + '자' : '') + '</div>';
+          html += '  </div>';
+          html += '  <div style="display:flex; gap:6px;">';
+          html += '    <button type="button" class="btn-sm" data-action="open-set" data-id="' + escapeHtml(s.id) + '"' + (isCurrent ? ' disabled' : '') + '>불러오기</button>';
+          if (isAskDel) {
+            html += '    <button type="button" class="btn-danger btn-sm" data-action="confirm-delete-set" data-id="' + escapeHtml(s.id) + '">삭제 확인</button>';
+            html += '    <button type="button" class="btn-sm" data-action="cancel-delete-set">취소</button>';
+          } else {
+            html += '    <button type="button" class="btn-danger btn-sm" data-action="ask-delete-set" data-id="' + escapeHtml(s.id) + '">삭제</button>';
+          }
+          html += '  </div>';
+          html += '</div>';
+        }
+        container.innerHTML = html;
+      }
+
+      function renderTabs() {
+        var tabBtns = document.querySelectorAll(".tab-buttons .tab-btn");
+        for (var i = 0; i < tabBtns.length; i++) {
+          var btn = tabBtns[i];
+          var t = btn.getAttribute("data-tab");
+          var isAct = (t === uiState.activeTab);
+          btn.className = "tab-btn" + (isAct ? " active" : "");
+          btn.setAttribute("aria-selected", isAct ? "true" : "false");
+        }
+
+        var hasSet = Boolean(appState.current_set && appState.current_set.items && appState.current_set.items.length);
+        document.getElementById("emptyWorkspace").style.display = hasSet ? "none" : "block";
+        document.getElementById("currentSetSummary").style.display = hasSet ? "block" : "none";
+        document.getElementById("ttsToolbar").style.display = hasSet ? "flex" : "none";
+
+        var controlCard = document.querySelector(".control-card");
+        if (controlCard) {
+          controlCard.style.display = uiState.sharedListenMode ? "none" : "block";
+        }
+        document.getElementById("btnExitSharedMode").style.display = uiState.sharedListenMode ? "inline-block" : "none";
+
+        document.getElementById("tabManage").style.display = (hasSet && uiState.activeTab === "manage") ? "block" : "none";
+        document.getElementById("tabListen").style.display = (hasSet && uiState.activeTab === "listen") ? "block" : "none";
+
+        var teacherSheet = document.getElementById("sheetTeacher");
+        var studentSheet = document.getElementById("sheetStudent");
+        var answerSheet = document.getElementById("sheetAnswer");
+
+        teacherSheet.className = "print-sheet" + (hasSet && uiState.activeTab === "teacher" ? " active-sheet print-target" : "");
+        studentSheet.className = "print-sheet" + (hasSet && uiState.activeTab === "student" ? " active-sheet print-target" : "");
+        answerSheet.className = "print-sheet" + (hasSet && uiState.activeTab === "answer" ? " active-sheet print-target" : "");
+
+        if (hasSet && uiState.activeTab === "manage") {
+          teacherSheet.className = "print-sheet print-target";
+        }
+      }
+
+      function renderManageItems() {
+        var cset = appState.current_set;
+        var summaryEl = document.getElementById("currentSetSummary");
+        var listEl = document.getElementById("manageItemsList");
+        if (!cset || !cset.items || !cset.items.length) {
+          listEl.innerHTML = "";
+          return;
+        }
+
+        summaryEl.innerHTML =
+          "<strong>현재 문제 묶음:</strong> " + escapeHtml(cset.title) +
+          " | <strong>난이도:</strong> " + escapeHtml(cset.difficulty) +
+          (cset.max_chars ? " (최대 " + escapeHtml(cset.max_chars) + "자)" : "") +
+          " | <strong>문항 수:</strong> " + escapeHtml(cset.items.length) + "문항" +
+          " | <strong>생성 모델:</strong> " + escapeHtml(cset.model || "gemini-2.5-flash-lite") +
+          " | <strong>최근 갱신:</strong> " + escapeHtml(cset.updated_at || cset.created_at);
+
+        var html = "";
+        for (var i = 0; i < cset.items.length; i++) {
+          var item = cset.items[i];
+          var isRegenThis = (uiState.busy && uiState.regeneratingNumber === item.number);
+          var isSpeakingThis = (uiState.speakingItemNumber === item.number);
+          html += '<div class="item-manage-card' + (isSpeakingThis ? ' speaking-active' : '') + '">';
+          html += '  <div class="item-manage-body">';
+          html += '    <div class="item-sentence-line">';
+          html += '      <span class="item-num-badge">' + escapeHtml(item.number) + '</span>';
+          html += '      <span>' + escapeHtml(item.sentence) + '</span>';
+          html += '      <span class="char-len-badge">' + escapeHtml(item.sentence.length) + '자</span>';
+          html += '    </div>';
+          html += '    <div class="item-meta-line">';
+          html += '      <span class="focus-tag">출제 포인트: ' + escapeHtml(item.focus) + '</span>';
+          html += '      <span>' + escapeHtml(item.explanation) + '</span>';
+          html += '    </div>';
+          html += '  </div>';
+          html += '  <div style="display:flex; gap:6px; flex-wrap:wrap;">';
+          html += '    <button type="button" class="btn-sm" data-action="speak-item" data-number="' + escapeHtml(item.number) + '">' + (uiState.speakingItemNumber === item.number ? '🔊 읽는 중...' : '🔊 듣기') + '</button>';
+          html += '    <button type="button" class="btn-sm" data-action="regenerate-item" data-number="' + escapeHtml(item.number) + '"' + (uiState.busy ? ' disabled' : '') + '>';
+          html += isRegenThis ? '다시 만드는 중...' : '이 문항 다시 만들기';
+          html += '    </button>';
+          html += '  </div>';
+          html += '</div>';
+        }
+        listEl.innerHTML = html;
+      }
+
+      function renderPrintSheets() {
+        var cset = appState.current_set;
+        if (!cset || !cset.items || !cset.items.length) {
+          document.getElementById("teacherItemsContainer").innerHTML = "";
+          document.getElementById("studentItemsContainer").innerHTML = "";
+          document.getElementById("answerItemsContainer").innerHTML = "";
+          return;
+        }
+
+        var items = cset.items;
+        var metaText = "난이도: " + cset.difficulty + " | 문항 수: " + items.length + "문항 | 생성일시: " + (cset.updated_at || cset.created_at);
+
+        // 1. 교사용 낭독지
+        document.getElementById("teacherSheetTitle").textContent = "국어 받아쓰기 — 교사용 낭독지 (" + cset.difficulty + ")";
+        document.getElementById("teacherSheetMeta").textContent = metaText;
+        var teacherHtml = "";
+        for (var i = 0; i < items.length; i++) {
+          var it = items[i];
+          teacherHtml += '<div class="sheet-item">';
+          teacherHtml += '  <div class="teacher-sentence">' + escapeHtml(it.number) + '. ' + escapeHtml(it.sentence) + '</div>';
+          teacherHtml += '</div>';
+        }
+        document.getElementById("teacherItemsContainer").innerHTML = teacherHtml;
+
+        // 2. 학생용 받아쓰기 용지 (정답 절대 미노출)
+        document.getElementById("studentSheetTitle").textContent = "국어 받아쓰기 평가 용지 (" + cset.difficulty + ")";
+        document.getElementById("studentTotalScore").textContent = String(items.length);
+        var studentHtml = "";
+        for (var j = 0; j < items.length; j++) {
+          var sit = items[j];
+          studentHtml += '<div class="student-write-row">';
+          studentHtml += '  <div class="student-num-label">' + escapeHtml(sit.number) + '번</div>';
+          studentHtml += '  <div class="write-line"></div>';
+          studentHtml += '  <div class="write-line"></div>';
+          studentHtml += '</div>';
+        }
+        document.getElementById("studentItemsContainer").innerHTML = studentHtml;
+
+        // 3. 정답·해설지
+        document.getElementById("answerSheetTitle").textContent = "국어 받아쓰기 — 정답 및 해설지 (" + cset.difficulty + ")";
+        document.getElementById("answerSheetMeta").textContent = metaText;
+        var answerHtml = "";
+        for (var k = 0; k < items.length; k++) {
+          var ait = items[k];
+          answerHtml += '<div class="sheet-item">';
+          answerHtml += '  <div class="teacher-sentence">' + escapeHtml(ait.number) + '. ' + escapeHtml(ait.sentence) + '</div>';
+          answerHtml += '  <div class="answer-explanation-box">';
+          answerHtml += '    <div><strong>• 출제 포인트:</strong> ' + escapeHtml(ait.focus) + '</div>';
+          answerHtml += '    <div><strong>• 해설:</strong> ' + escapeHtml(ait.explanation) + '</div>';
+          answerHtml += '  </div>';
+          answerHtml += '</div>';
+        }
+        document.getElementById("answerItemsContainer").innerHTML = answerHtml;
+      }
+
+      function renderListenItems() {
+        var cset = appState.current_set;
+        var listEl = document.getElementById("listenItemsList");
+        var toggleBtn = document.getElementById("btnToggleListenAnswers");
+        if (toggleBtn) {
+          toggleBtn.textContent = uiState.showListenAnswers ? "정답 및 해설 숨기기" : "정답 및 해설 펼쳐보기";
+        }
+        if (!cset || !cset.items || !cset.items.length) {
+          listEl.innerHTML = "";
+          return;
+        }
+        var html = "";
+        for (var i = 0; i < cset.items.length; i++) {
+          var it = cset.items[i];
+          var isSpeaking = (uiState.speakingItemNumber === it.number);
+          html += '<div class="listen-item-card' + (isSpeaking ? ' speaking-active' : '') + '">';
+          html += '  <div style="flex:1;">';
+          html += '    <div style="font-size:1.05rem; font-weight:700;">';
+          html += '      <span class="item-num-badge">' + escapeHtml(it.number) + '</span>';
+          if (uiState.showListenAnswers) {
+            html += '      <span>' + escapeHtml(it.sentence) + '</span>';
+            html += '      <span class="char-len-badge">' + escapeHtml(it.sentence.length) + '자</span>';
+          } else {
+            html += '      <span style="color:var(--text-sub); font-weight:600;">[음성을 듣고 종이에 받아쓰세요 · ' + escapeHtml(it.sentence.length) + '자 문장]</span>';
+          }
+          html += '    </div>';
+          if (uiState.showListenAnswers) {
+            html += '    <div class="item-meta-line" style="margin-top:6px;">';
+            html += '      <span class="focus-tag">출제 포인트: ' + escapeHtml(it.focus) + '</span>';
+            html += '      <span>' + escapeHtml(it.explanation) + '</span>';
+            html += '    </div>';
+          }
+          html += '  </div>';
+          html += '  <div>';
+          html += '    <button type="button" class="btn-primary btn-sm" data-action="speak-item" data-number="' + escapeHtml(it.number) + '">';
+          html += isSpeaking ? '🔊 읽는 중...' : '🔊 ' + escapeHtml(it.number) + '번 문장 듣기';
+          html += '    </button>';
+          html += '  </div>';
+          html += '</div>';
+        }
+        listEl.innerHTML = html;
+      }
+
+      function stopTtsPlayback() {
+        ttsSessionToken++;
+        if (ttsTimerId) {
+          clearTimeout(ttsTimerId);
+          ttsTimerId = null;
+        }
+        if (typeof window.speechSynthesis !== "undefined") {
+          try {
+            window.speechSynthesis.cancel();
+          } catch (e) {}
+        }
+        uiState.speakingItemNumber = null;
+        uiState.isPlayingAll = false;
+        var stopBtn = document.getElementById("btnStopTts");
+        var playAllBtn = document.getElementById("btnPlayAllTts");
+        var statusEl = document.getElementById("ttsPlayingStatus");
+        if (stopBtn) stopBtn.disabled = true;
+        if (playAllBtn) playAllBtn.textContent = "▶ 전체 문제 연속 읽어주기";
+        if (statusEl) statusEl.textContent = "";
+        renderManageItems();
+        renderListenItems();
+      }
+
+      function getKoreanVoice() {
+        if (typeof window.speechSynthesis === "undefined") return null;
+        var voices = window.speechSynthesis.getVoices() || [];
+        for (var i = 0; i < voices.length; i++) {
+          if (voices[i].lang && voices[i].lang.toLowerCase().indexOf("ko") !== -1) {
+            return voices[i];
+          }
+        }
+        return null;
+      }
+
+      function speakTextOnce(text, rate, token) {
+        return new Promise(function (resolve) {
+          if (token !== ttsSessionToken) return resolve(false);
+          if (typeof window.speechSynthesis === "undefined" || typeof window.SpeechSynthesisUtterance === "undefined") {
+            return setTimeout(function () { resolve(true); }, 150);
+          }
+          try {
+            window.speechSynthesis.cancel();
+            var utter = new SpeechSynthesisUtterance(text);
+            utter.lang = "ko-KR";
+            utter.rate = rate;
+            var koVoice = getKoreanVoice();
+            if (koVoice) utter.voice = koVoice;
+            utter.onend = function () { resolve(token === ttsSessionToken); };
+            utter.onerror = function () { resolve(token === ttsSessionToken); };
+            window.speechSynthesis.speak(utter);
+          } catch (e) {
+            resolve(false);
+          }
+        });
+      }
+
+      function waitTtsDelay(ms, token) {
+        return new Promise(function (resolve) {
+          if (token !== ttsSessionToken) return resolve(false);
+          var actualMs = typeof window.__testFastTtsDelay === "number" ? window.__testFastTtsDelay : ms;
+          ttsTimerId = setTimeout(function () {
+            resolve(token === ttsSessionToken);
+          }, actualMs);
+        });
+      }
+
+      function toSinoKoreanNumberSpeech(num) {
+        var n = parseInt(num, 10);
+        if (isNaN(n) || n < 1 || n > 99) return String(num) + " 번.";
+        var digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
+        var tens = Math.floor(n / 10);
+        var ones = n % 10;
+        var word = "";
+        if (tens === 1) word += "십";
+        else if (tens > 1) word += digits[tens] + "십";
+        if (ones > 0) word += digits[ones];
+        return word + " 번.";
+      }
+
+      function shuffleCurrentSetOrder(forceReshuffle) {
+        var cset = appState.current_set;
+        if (!cset || !Array.isArray(cset.items) || cset.items.length < 2) return;
+        if (cset._isShuffledForListen && !forceReshuffle) return;
+
+        var arr = cset.items.slice();
+        var originalSig = arr.map(function (x) { return x.sentence; }).join("|");
+        // 피셔-예이츠 셔플 (2문항 이상일 때 기존 순서와 달라지도록 최대 5회 시도)
+        for (var attempt = 0; attempt < 5; attempt++) {
+          for (var i = arr.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+          }
+          var newSig = arr.map(function (x) { return x.sentence; }).join("|");
+          if (newSig !== originalSig) break;
+        }
+        for (var k = 0; k < arr.length; k++) {
+          arr[k] = {
+            number: k + 1,
+            sentence: arr[k].sentence,
+            focus: arr[k].focus,
+            explanation: arr[k].explanation
+          };
+        }
+        cset.items = arr;
+        cset._isShuffledForListen = true;
+        saveToBrowserStorage();
+      }
+
+      function playSingleItemSequence(item, rate, repeatCount, token) {
+        uiState.speakingItemNumber = item.number;
+        var stopBtn = document.getElementById("btnStopTts");
+        var statusEl = document.getElementById("ttsPlayingStatus");
+        if (stopBtn) stopBtn.disabled = false;
+        if (statusEl) statusEl.textContent = "🔊 " + item.number + "번 문항 낭독 중...";
+        renderManageItems();
+        renderListenItems();
+
+        return speakTextOnce(toSinoKoreanNumberSpeech(item.number), rate, token)
+          .then(function (ok) {
+            if (!ok) return false;
+            return waitTtsDelay(650, token);
+          })
+          .then(function (ok) {
+            if (!ok) return false;
+            function repeatLoop(repIdx) {
+              if (token !== ttsSessionToken) return Promise.resolve(false);
+              if (statusEl) {
+                statusEl.textContent = "🔊 " + item.number + "번 문항 (" + (repIdx + 1) + "/" + repeatCount + "회) 읽는 중";
+              }
+              return speakTextOnce(item.sentence, rate, token).then(function (ok2) {
+                if (!ok2) return false;
+                if (repIdx + 1 < repeatCount) {
+                  return waitTtsDelay(1800, token).then(function (ok3) {
+                    if (!ok3) return false;
+                    return repeatLoop(repIdx + 1);
+                  });
+                }
+                return true;
+              });
+            }
+            return repeatLoop(0);
+          });
+      }
+
+      function startSpeakSingleItem(itemNumber) {
+        var cset = appState.current_set;
+        if (!cset || !Array.isArray(cset.items)) return;
+        var target = null;
+        for (var i = 0; i < cset.items.length; i++) {
+          if (cset.items[i].number === itemNumber) {
+            target = cset.items[i];
+            break;
+          }
+        }
+        if (!target) return;
+
+        stopTtsPlayback();
+        var token = ++ttsSessionToken;
+        var rate = parseFloat(document.getElementById("ttsRateSelect").value) || 0.88;
+        var repeatCount = parseInt(document.getElementById("ttsRepeatSelect").value, 10) || 2;
+
+        playSingleItemSequence(target, rate, repeatCount, token).then(function (finished) {
+          if (finished && token === ttsSessionToken) {
+            stopTtsPlayback();
+          }
+        });
+      }
+
+      function startSpeakAllItems() {
+        var cset = appState.current_set;
+        if (!cset || !Array.isArray(cset.items) || !cset.items.length) {
+          showBanner("error", "읽어줄 문제가 없습니다.");
+          return;
+        }
+        stopTtsPlayback();
+        var token = ++ttsSessionToken;
+        uiState.isPlayingAll = true;
+        var playAllBtn = document.getElementById("btnPlayAllTts");
+        if (playAllBtn) playAllBtn.textContent = "🔊 전체 연속 낭독 중...";
+
+        var rate = parseFloat(document.getElementById("ttsRateSelect").value) || 0.88;
+        var repeatCount = parseInt(document.getElementById("ttsRepeatSelect").value, 10) || 2;
+        var pauseSec = parseInt(document.getElementById("ttsPauseSelect").value, 10) || 5;
+        var items = cset.items;
+
+        function nextItemLoop(idx) {
+          if (token !== ttsSessionToken || idx >= items.length) {
+            if (token === ttsSessionToken) {
+              stopTtsPlayback();
+              showBanner("success", "전체 문항 음성 낭독을 완료했습니다.");
+            }
+            return Promise.resolve();
+          }
+          return playSingleItemSequence(items[idx], rate, repeatCount, token).then(function (ok) {
+            if (!ok || token !== ttsSessionToken) return;
+            if (idx + 1 < items.length) {
+              var statusEl = document.getElementById("ttsPlayingStatus");
+              if (statusEl) statusEl.textContent = "⏳ 다음 문항까지 " + pauseSec + "초 대기 중...";
+              return waitTtsDelay(pauseSec * 1000, token).then(function (okWait) {
+                if (!okWait) return;
+                return nextItemLoop(idx + 1);
+              });
+            } else {
+              stopTtsPlayback();
+              showBanner("success", "전체 문항 음성 낭독을 마쳤습니다.");
+            }
+          });
+        }
+
+        nextItemLoop(0);
+      }
+
+      // UTF-8 안전 Base64 URL 인코딩/디코딩 (API 키는 절대 포함하지 않고 문항 데이터만 인코딩)
+      function encodeSharePayload(cset) {
+        var minimal = {
+          t: cset.title,
+          d: cset.difficulty,
+          m: cset.max_chars || 35,
+          c: cset.created_at,
+          i: (cset.items || []).map(function (x) {
+            return { n: x.number, s: x.sentence, f: x.focus, e: x.explanation };
+          })
+        };
+        var jsonStr = JSON.stringify(minimal);
+        var utf8Bytes = encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function (_, p1) {
+          return String.fromCharCode(parseInt(p1, 16));
+        });
+        return btoa(utf8Bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      }
+
+      function decodeSharePayload(encoded) {
+        var b64 = String(encoded || "").replace(/-/g, "+").replace(/_/g, "/");
+        while (b64.length % 4) b64 += "=";
+        var bin = atob(b64);
+        var pct = "";
+        for (var i = 0; i < bin.length; i++) {
+          var hex = bin.charCodeAt(i).toString(16).toUpperCase();
+          pct += "%" + (hex.length < 2 ? "0" : "") + hex;
+        }
+        var obj = JSON.parse(decodeURIComponent(pct));
+        if (!obj || !Array.isArray(obj.i) || !obj.i.length) return null;
+        return {
+          id: "shared_" + Date.now(),
+          title: String(obj.t || "공유된 국어 받아쓰기"),
+          difficulty: String(obj.d || "중등 기본"),
+          max_chars: parseInt(obj.m, 10) || 35,
+          count: obj.i.length,
+          provider: "gemini",
+          provider_name: "공유된 받아쓰기 문제",
+          model: "공유 링크",
+          created_at: String(obj.c || "공유 링크"),
+          updated_at: String(obj.c || "공유 링크"),
+          items: obj.i.map(function (x, idx) {
+            return {
+              number: parseInt(x.n, 10) || (idx + 1),
+              sentence: String(x.s || ""),
+              focus: String(x.f || ""),
+              explanation: String(x.e || "")
+            };
+          })
+        };
+      }
+
+      function checkHashShareLinkOnLoad() {
+        var hash = window.location.hash || "";
+        if (hash.indexOf("#listen=") === 0) {
+          var token = hash.slice("#listen=".length).trim();
+          try {
+            var sharedSet = decodeSharePayload(token);
+            if (sharedSet) {
+              appState.current_set = sharedSet;
+              shuffleCurrentSetOrder(true);
+              uiState.sharedListenMode = true;
+              uiState.showListenAnswers = false;
+              uiState.activeTab = "listen";
+              showBanner("info", "공유된 받아쓰기 문제를 랜덤 순서로 불러왔습니다. [정답·해설지]도 동일한 순서로 배치되었습니다.");
+            }
+          } catch (e) {
+            showBanner("error", "공유 링크 주소가 손상되었거나 올바르지 않습니다.");
+          }
+        }
+      }
+
+      function renderAll() {
+        renderHeaderAndSettings();
+        renderControls();
+        renderSavedSets();
+        renderManageItems();
+        renderListenItems();
+        renderPrintSheets();
+        renderTabs();
+      }
+
+      function triggerPrint(sheetTab) {
+        if (!appState.current_set || !appState.current_set.items || !appState.current_set.items.length) {
+          showBanner("error", "인쇄할 문제가 없습니다. 먼저 문제를 생성하거나 저장된 문제를 불러와 주세요.");
+          return;
+        }
+        uiState.activeTab = sheetTab;
+        renderTabs();
+        setTimeout(function () {
+          window.print();
+        }, 80);
+      }
+
+      function validateCountInput() {
+        var raw = document.getElementById("countInput").value.trim();
+        if (!/^\d+$/.test(raw)) {
+          showBanner("error", "문항 수는 1부터 30 사이의 양의 정수로 입력해 주세요.");
+          return null;
+        }
+        var num = parseInt(raw, 10);
+        if (num < 1 || num > 30) {
+          showBanner("error", "문항 수는 1문항 이상 30문항 이하만 생성할 수 있습니다.");
+          return null;
+        }
+        uiState.count = num;
+        renderControls();
+        return num;
+      }
+
+      function validateMaxLengthInput() {
+        var raw = document.getElementById("maxLengthInput").value.trim();
+        if (!/^\d+$/.test(raw)) {
+          showBanner("error", "최대 글자 수는 12자 이상 100자 이하의 정수로 입력해 주세요.");
+          return null;
+        }
+        var num = parseInt(raw, 10);
+        if (num < 12 || num > 100) {
+          showBanner("error", "최대 글자 수는 12자 이상 100자 이하로 지정해 주세요.");
+          return null;
+        }
+        appState.max_lengths[uiState.difficulty] = num;
+        saveToBrowserStorage();
+        renderControls();
+        return num;
+      }
+
+      // 이벤트 바인딩
+      document.getElementById("btnCloseBanner").addEventListener("click", hideBanner);
+
+      document.getElementById("btnToggleSettings").addEventListener("click", function () {
+        var panel = document.getElementById("settingsPanel");
+        var isOpen = panel.classList.toggle("open");
+        this.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      });
+
+      document.getElementById("btnCloseSettings").addEventListener("click", function () {
+        document.getElementById("settingsPanel").classList.remove("open");
+        document.getElementById("btnToggleSettings").setAttribute("aria-expanded", "false");
+      });
+
+      document.getElementById("btnToggleSaved").addEventListener("click", function () {
+        var panel = document.getElementById("savedPanel");
+        var isOpen = panel.classList.toggle("open");
+        this.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      });
+
+      document.getElementById("btnCloseSaved").addEventListener("click", function () {
+        document.getElementById("savedPanel").classList.remove("open");
+        document.getElementById("btnToggleSaved").setAttribute("aria-expanded", "false");
+      });
+
+      document.getElementById("chkRememberKeyInBrowser").addEventListener("change", function () {
+        appState.remember_keys = Boolean(this.checked);
+        saveToBrowserStorage();
+        showBanner("info", appState.remember_keys
+          ? "Gemini API 키를 이 컴퓨터의 브라우저에 기억하도록 설정했습니다."
+          : "현재 브라우저 창을 닫으면 API 키가 즉시 삭제되도록 설정했습니다.");
+      });
+
+      // 보관함 JSON 파일 내보내기
+      document.getElementById("btnExportBackup").addEventListener("click", function () {
+        var exportData = {
+          app: "korean_dictation_gemini_backup",
+          exported_at: formatNow(),
+          selected_model: appState.selected_model,
+          last_difficulty: uiState.difficulty,
+          last_count: uiState.count,
+          max_lengths: appState.max_lengths,
+          current_set: appState.current_set,
+          saved_sets: appState.saved_sets || [],
+          history_sentences: appState.history_sentences || []
+        };
+        var jsonText = redactSecrets(JSON.stringify(exportData, null, 2));
+        var blob = new Blob([jsonText], { type: "application/json;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "국어받아쓰기_보관함_" + formatNow().slice(0, 10) + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        showBanner("success", "문제 보관함 파일(.json)을 내려받았습니다. (API 키는 포함되지 않습니다.)");
+      });
+
+      document.getElementById("btnImportBackup").addEventListener("click", function () {
+        document.getElementById("fileImportInput").click();
+      });
+
+      document.getElementById("fileImportInput").addEventListener("change", function () {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            var data = JSON.parse(String(ev.target.result || ""));
+            if (!data || typeof data !== "object" || !Array.isArray(data.saved_sets)) {
+              showBanner("error", "올바른 받아쓰기 보관함 파일(.json)이 아닙니다.");
+              return;
+            }
+            appState.saved_sets = data.saved_sets.slice(0, 50);
+            if (data.current_set && Array.isArray(data.current_set.items)) {
+              appState.current_set = data.current_set;
+            } else if (appState.saved_sets.length) {
+              appState.current_set = appState.saved_sets[0];
+            }
+            if (data.max_lengths && typeof data.max_lengths === "object") {
+              for (var k in DEFAULT_MAX_LENGTHS) {
+                var mv = parseInt(data.max_lengths[k], 10);
+                if (!isNaN(mv) && mv >= 12 && mv <= 100) {
+                  appState.max_lengths[k] = mv;
+                }
+              }
+            }
+            if (Array.isArray(data.history_sentences)) {
+              appState.history_sentences = data.history_sentences.slice(-500);
+            }
+            saveToBrowserStorage();
+            renderAll();
+            showBanner("success", "보관함 파일을 불러왔습니다. (당시 문항 그대로 복원됨)");
+          } catch (e) {
+            showBanner("error", "보관함 파일을 읽는 중 오류가 발생했습니다.");
+          }
+        };
+        reader.readAsText(file, "utf-8");
+        this.value = "";
+      });
+
+      // 난이도 선택
+      document.getElementById("difficultyGroup").addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-difficulty]");
+        if (!btn) return;
+        uiState.difficulty = btn.getAttribute("data-difficulty");
+        document.getElementById("maxLengthInput").value = String(getMaxLenForDifficulty(uiState.difficulty));
+        saveToBrowserStorage();
+        renderControls();
+      });
+
+      // 난이도별 최대 글자 수 입력 변경
+      document.getElementById("maxLengthInput").addEventListener("input", function () {
+        var v = parseInt(this.value, 10);
+        if (!isNaN(v) && v >= 12 && v <= 100) {
+          appState.max_lengths[uiState.difficulty] = v;
+          saveToBrowserStorage();
+          renderControls();
+        }
+      });
+
+      // 난이도별 최대 글자 수 기본값 복원
+      document.getElementById("btnResetMaxLen").addEventListener("click", function () {
+        var defVal = DEFAULT_MAX_LENGTHS[uiState.difficulty] || 35;
+        appState.max_lengths[uiState.difficulty] = defVal;
+        document.getElementById("maxLengthInput").value = String(defVal);
+        saveToBrowserStorage();
+        renderControls();
+        showBanner("info", "[" + uiState.difficulty + "] 최대 글자 수를 기본값(" + defVal + "자)으로 되돌렸습니다.");
+      });
+
+      // 문항 수 빠른 선택
+      document.getElementById("presetCountGroup").addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-count]");
+        if (!btn) return;
+        uiState.count = parseInt(btn.getAttribute("data-count"), 10);
+        document.getElementById("countInput").value = String(uiState.count);
+        saveToBrowserStorage();
+        renderControls();
+      });
+
+      document.getElementById("countInput").addEventListener("input", function () {
+        var v = parseInt(this.value, 10);
+        if (!isNaN(v) && v >= 1 && v <= 30) {
+          uiState.count = v;
+          saveToBrowserStorage();
+          renderControls();
+        }
+      });
+
+      // Gemini 무료 모델 변경
+      document.getElementById("modelSelect").addEventListener("change", function () {
+        var chosenModel = this.value;
+        if (!isAllowedGeminiModel(chosenModel)) {
+          showBanner("error", "확실한 무료 버전 Gemini 모델만 선택할 수 있습니다.");
+          return;
+        }
+        appState.selected_model = chosenModel;
+        saveToBrowserStorage();
+        renderAll();
+        showBanner("info", "Gemini 무료 모델을 " + chosenModel + "로 설정했습니다.");
+      });
+
+      // 설정 패널 내부 버튼 위임
+      document.getElementById("providerCardsContainer").addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        var action = btn.getAttribute("data-action");
+
+        if (action === "save-key") {
+          var inputEl = document.getElementById("keyInput_gemini");
+          var keyVal = inputEl ? inputEl.value.trim() : "";
+          if (!keyVal) {
+            showBanner("error", "등록할 Google Gemini API 키를 입력해 주세요.");
+            return;
+          }
+          geminiApiKey = keyVal;
+          if (inputEl) inputEl.value = "";
+          saveToBrowserStorage();
+          renderAll();
+          showBanner("success", "Google Gemini 무료 API 키가 등록되었습니다. (화면이나 파일에 다시 노출되지 않습니다.)");
+        } else if (action === "ask-delete-key") {
+          uiState.confirmDeleteKey = true;
+          renderHeaderAndSettings();
+        } else if (action === "cancel-delete-key") {
+          uiState.confirmDeleteKey = false;
+          renderHeaderAndSettings();
+        } else if (action === "confirm-delete-key") {
+          uiState.confirmDeleteKey = false;
+          geminiApiKey = "";
+          saveToBrowserStorage();
+          renderAll();
+          showBanner("info", "Google Gemini API 키를 삭제했습니다.");
+        }
+      });
+
+      // 보관함 패널 내부 버튼 위임
+      document.getElementById("savedSetsContainer").addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        var action = btn.getAttribute("data-action");
+        var setId = btn.getAttribute("data-id");
+
+        if (action === "open-set") {
+          var found = null;
+          for (var i = 0; i < appState.saved_sets.length; i++) {
+            if (appState.saved_sets[i].id === setId) {
+              found = appState.saved_sets[i];
+              break;
+            }
+          }
+          if (!found) {
+            showBanner("error", "선택한 저장 문제 묶음을 찾을 수 없습니다.");
+            return;
+          }
+          appState.current_set = found;
+          saveToBrowserStorage();
+          renderAll();
+          showBanner("info", "저장된 문제 묶음을 불러왔습니다. (자동 재생성 없음)");
+        } else if (action === "ask-delete-set") {
+          uiState.confirmDeleteSetId = setId;
+          renderSavedSets();
+        } else if (action === "cancel-delete-set") {
+          uiState.confirmDeleteSetId = null;
+          renderSavedSets();
+        } else if (action === "confirm-delete-set") {
+          uiState.confirmDeleteSetId = null;
+          var remaining = [];
+          for (var j = 0; j < appState.saved_sets.length; j++) {
+            if (appState.saved_sets[j].id !== setId) {
+              remaining.push(appState.saved_sets[j]);
+            }
+          }
+          appState.saved_sets = remaining;
+          if (appState.current_set && appState.current_set.id === setId) {
+            appState.current_set = remaining.length ? remaining[0] : null;
+          }
+          saveToBrowserStorage();
+          renderAll();
+          showBanner("info", "저장된 문제 묶음을 삭제했습니다.");
+        }
+      });
+
+      // 새 문제 만들기
+      document.getElementById("btnGenerateSet").addEventListener("click", function () {
+        if (uiState.busy) return;
+        var validCount = validateCountInput();
+        if (validCount === null) return;
+        var validMaxLen = validateMaxLengthInput();
+        if (validMaxLen === null) return;
+
+        var chosenModel = document.getElementById("modelSelect").value || appState.selected_model;
+
+        if (!appState.registered) {
+          document.getElementById("settingsPanel").classList.add("open");
+          showBanner("error", "Google Gemini 무료 API 키가 등록되어 있지 않습니다. 먼저 위 설정 화면에서 API 키를 등록해 주세요.");
+          return;
+        }
+
+        setBusy(true, null);
+        var startTime = Date.now();
+        showBanner("info", "Gemini 무료 API (" + chosenModel + ")로 " + uiState.difficulty + " " + validCount + "문항(최대 " + validMaxLen + "자)을 빠르게 생성하고 있습니다...");
+
+        generateItemsWithRetry(
+          chosenModel,
+          uiState.difficulty,
+          validCount,
+          validMaxLen,
+          [],
+          appState.history_sentences,
+          function (progressMsg) {
+            showBanner("warn", progressMsg);
+          }
+        )
+          .then(function (genRes) {
+            var elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
+            var validatedItems = genRes.items;
+            var actualModel = genRes.usedModel || chosenModel;
+            var nowStr = formatNow();
+            var newSet = {
+              id: "set_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+              title: uiState.difficulty + " 받아쓰기 (" + validCount + "문항 · 최대 " + validMaxLen + "자)",
+              difficulty: uiState.difficulty,
+              max_chars: validMaxLen,
+              count: validCount,
+              provider: "gemini",
+              provider_name: "Google Gemini 무료 API",
+              model: actualModel,
+              created_at: nowStr,
+              updated_at: nowStr,
+              items: validatedItems
+            };
+
+            appState.current_set = newSet;
+            appState.selected_model = actualModel;
+            appState.saved_sets = [newSet].concat(appState.saved_sets || []).slice(0, 50);
+            for (var i = 0; i < validatedItems.length; i++) {
+              var s = validatedItems[i].sentence;
+              if (appState.history_sentences.indexOf(s) === -1) {
+                appState.history_sentences.push(s);
+              }
+            }
+            appState.history_sentences = appState.history_sentences.slice(-500);
+
+            setBusy(false, null);
+            uiState.activeTab = "manage";
+            saveToBrowserStorage();
+            renderAll();
+            var suffix = actualModel !== chosenModel ? " (" + actualModel + " 자동 전환)" : "";
+            showBanner("success", validCount + "문항 생성을 완료했습니다! (소요 시간: " + elapsedSec + "초)" + suffix);
+          })
+          .catch(function (err) {
+            setBusy(false, null);
+            showBanner("error", err.message || "문제 생성 중 오류가 발생했습니다.");
+          });
+      });
+
+      // 문항별 듣기 및 개별 문항 다시 만들기
+      document.getElementById("manageItemsList").addEventListener("click", function (e) {
+        var speakBtn = e.target.closest("button[data-action='speak-item']");
+        if (speakBtn) {
+          startSpeakSingleItem(parseInt(speakBtn.getAttribute("data-number"), 10));
+          return;
+        }
+        var btn = e.target.closest("button[data-action='regenerate-item']");
+        if (!btn || uiState.busy) return;
+        var num = parseInt(btn.getAttribute("data-number"), 10);
+        var chosenModel = document.getElementById("modelSelect").value || appState.selected_model;
+
+        if (!appState.current_set || !Array.isArray(appState.current_set.items)) {
+          showBanner("error", "현재 열려 있는 문제 묶음이 없습니다.");
+          return;
+        }
+        if (!appState.registered) {
+          document.getElementById("settingsPanel").classList.add("open");
+          showBanner("error", "Google Gemini 무료 API 키가 등록되어 있지 않습니다. 기존 문항은 그대로 유지됩니다.");
+          return;
+        }
+
+        var items = appState.current_set.items;
+        var targetIdx = -1;
+        var otherSentences = [];
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].number === num) {
+            targetIdx = i;
+          } else {
+            otherSentences.push(items[i].sentence);
+          }
+        }
+        if (targetIdx === -1) return;
+
+        var existingForRegen = otherSentences.concat([items[targetIdx].sentence]);
+        var difficulty = appState.current_set.difficulty || uiState.difficulty;
+        var maxChars = appState.current_set.max_chars || getMaxLenForDifficulty(difficulty);
+
+        setBusy(true, num);
+        showBanner("info", num + "번 문항(최대 " + maxChars + "자)을 " + chosenModel + " 모델로 빠르게 다시 만들고 있습니다...");
+
+        generateItemsWithRetry(
+          chosenModel,
+          difficulty,
+          1,
+          maxChars,
+          existingForRegen,
+          appState.history_sentences,
+          function (progressMsg) {
+            showBanner("warn", progressMsg);
+          }
+        )
+          .then(function (genRes) {
+            var newItem = genRes.items[0];
+            var actualModel = genRes.usedModel || chosenModel;
+            newItem.number = num;
+            var updatedItems = items.slice();
+            updatedItems[targetIdx] = newItem;
+
+            var nowStr = formatNow();
+            appState.current_set.items = updatedItems;
+            appState.current_set.updated_at = nowStr;
+            appState.current_set.model = actualModel;
+            appState.selected_model = actualModel;
+
+            for (var j = 0; j < appState.saved_sets.length; j++) {
+              if (appState.saved_sets[j].id === appState.current_set.id) {
+                appState.saved_sets[j] = appState.current_set;
+                break;
+              }
+            }
+            if (appState.history_sentences.indexOf(newItem.sentence) === -1) {
+              appState.history_sentences.push(newItem.sentence);
+            }
+            appState.history_sentences = appState.history_sentences.slice(-500);
+
+            setBusy(false, null);
+            saveToBrowserStorage();
+            renderAll();
+            showBanner("success", num + "번 문항을 새로운 문장(" + newItem.sentence.length + "자)으로 교체했습니다.");
+          })
+          .catch(function (err) {
+            setBusy(false, null);
+            showBanner("error", (err.message || "재생성 실패") + " (기존 문항이 그대로 보존되었습니다.)");
+          });
+      });
+
+      // 탭 전환 (음성 듣기 화면 진입 시 아직 섞이지 않은 문제 묶음이면 자동으로 랜덤 재배치하여 정답·해설지와 동기화)
+      document.querySelector(".tab-buttons").addEventListener("click", function (e) {
+        var btn = e.target.closest("button[data-tab]");
+        if (!btn) return;
+        var nextTab = btn.getAttribute("data-tab");
+        if (nextTab === "listen") {
+          shuffleCurrentSetOrder(false);
+          renderAll();
+        }
+        uiState.activeTab = nextTab;
+        renderTabs();
+      });
+
+      // 인쇄 버튼
+      document.getElementById("btnPrintTeacher").addEventListener("click", function () {
+        triggerPrint("teacher");
+      });
+      document.getElementById("btnPrintStudent").addEventListener("click", function () {
+        triggerPrint("student");
+      });
+      document.getElementById("btnPrintAnswer").addEventListener("click", function () {
+        triggerPrint("answer");
+      });
+
+      // 인쇄 양식 확인용 샘플 열기
+      document.getElementById("btnLoadLayoutPreview").addEventListener("click", function () {
+        appState.current_set = {
+          id: "layout_preview_only",
+          title: "[인쇄 양식 확인용 샘플] 중등 심화 받아쓰기 (3문항 · 최대 48자)",
+          difficulty: "중등 심화",
+          max_chars: 48,
+          count: 3,
+          provider: "gemini",
+          provider_name: "인쇄 양식 레이아웃 확인용 샘플 (API 미호출)",
+          model: "gemini-2.5-flash-lite",
+          created_at: "레이아웃 미리보기",
+          updated_at: "레이아웃 미리보기",
+          items: [
+            {
+              number: 1,
+              sentence: "오랜만에 만난 친구와 며칠 동안 밀린 이야기를 나누느라고 시간 가는 줄 몰랐다.",
+              focus: "며칠 / 나누느라고 / 가는 줄 (단어 및 의존명사 띄어쓰기)",
+              explanation: "'몇 일'이 아니라 '며칠'로 적고 의존명사 '줄'은 띄어 씁니다."
+            },
+            {
+              number: 2,
+              sentence: "도서관에서 빌린 책을 곰곰이 읽어 보니 작가가 전하려는 주제가 금세 이해되었다.",
+              focus: "곰곰이 / 읽어 보니 / 금세 (부사 표기와 보조용언)",
+              explanation: "부사 '곰곰이'는 '-이'로 적고 '금세'는 'ㅔ'로 표기합니다."
+            },
+            {
+              number: 3,
+              sentence: "실험 결과를 샅샅이 검토한 끝에 가설이 틀리지 않았음을 비로소 확인할 수 있었다.",
+              focus: "샅샅이 / 않았음을 / 확인할 수 (부사·부정 표현·의존명사)",
+              explanation: "'샅샅이'는 '-이'로 적으며 의존명사 '수'는 앞말과 띄어 씁니다."
+            }
+          ]
+        };
+        renderAll();
+        showBanner("info", "인쇄 양식(교사용 낭독지·학생용 받아쓰기 용지·정답 및 해설지) 확인용 샘플을 표시했습니다.");
+      });
+
+      // 자동화 테스트용 내부 API 노출
+      window.__dictationAppTestHook = {
+        registerKey: function (key) {
+          geminiApiKey = String(key || "").trim();
+          saveToBrowserStorage();
+          renderAll();
+        },
+        selectModel: function (model) {
+          if (!isAllowedGeminiModel(model)) {
+            throw makeAppError("INVALID_INPUT", "확실한 무료 버전 Gemini 모델만 선택할 수 있습니다.");
+          }
+          appState.selected_model = model;
+          saveToBrowserStorage();
+          renderAll();
+        },
+        toSinoSpeech: toSinoKoreanNumberSpeech,
+        getPublicStateJson: function () {
+          return redactSecrets(JSON.stringify(appState));
+        }
+      };
+
+      // 듣기 전용 탭 내부 문항별 듣기 버튼
+      document.getElementById("listenItemsList").addEventListener("click", function (e) {
+        var speakBtn = e.target.closest("button[data-action='speak-item']");
+        if (!speakBtn) return;
+        startSpeakSingleItem(parseInt(speakBtn.getAttribute("data-number"), 10));
+      });
+
+      document.getElementById("btnShuffleListenOrder").addEventListener("click", function () {
+        stopTtsPlayback();
+        shuffleCurrentSetOrder(true);
+        renderAll();
+        showBanner("info", "문제 순서를 랜덤으로 다시 섞었습니다. [정답·해설지 미리보기]와 [교사용 낭독지]도 동일한 순서로 갱신되었습니다.");
+      });
+
+      document.getElementById("btnToggleListenAnswers").addEventListener("click", function () {
+        uiState.showListenAnswers = !uiState.showListenAnswers;
+        renderListenItems();
+      });
+
+      document.getElementById("btnPlayAllTts").addEventListener("click", function () {
+        startSpeakAllItems();
+      });
+
+      document.getElementById("btnStopTts").addEventListener("click", function () {
+        stopTtsPlayback();
+      });
+
+      document.getElementById("btnCopyShareLink").addEventListener("click", function () {
+        if (!appState.current_set || !appState.current_set.items || !appState.current_set.items.length) {
+          showBanner("error", "공유할 문제가 없습니다. 먼저 문제를 생성해 주세요.");
+          return;
+        }
+        shuffleCurrentSetOrder(false);
+        var encoded = encodeSharePayload(appState.current_set);
+        var baseUrl = window.location.href.split("#")[0];
+        var shareUrl = baseUrl + "#listen=" + encoded;
+        var box = document.getElementById("shareUrlBox");
+        var input = document.getElementById("shareUrlInput");
+        box.classList.add("show");
+        input.value = shareUrl;
+        uiState.activeTab = "listen";
+        renderAll();
+        try {
+          input.select();
+          document.execCommand("copy");
+        } catch (e) {}
+        showBanner("success", "학생용 듣기 공유 주소(URL)를 생성했습니다! 아래 주소를 복사해 전달하세요.");
+      });
+
+      document.getElementById("btnCopyUrlInput").addEventListener("click", function () {
+        var input = document.getElementById("shareUrlInput");
+        if (!input || !input.value) return;
+        input.select();
+        var copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (e) {}
+        if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(input.value).catch(function () {});
+        }
+        showBanner("success", "공유 주소를 클립보드에 복사했습니다.");
+      });
+
+      document.getElementById("btnCloseShareBox").addEventListener("click", function () {
+        document.getElementById("shareUrlBox").classList.remove("show");
+      });
+
+      document.getElementById("btnExitSharedMode").addEventListener("click", function () {
+        uiState.sharedListenMode = false;
+        renderAll();
+      });
+
+      window.addEventListener("hashchange", function () {
+        checkHashShareLinkOnLoad();
+        renderAll();
+      });
+
+      loadFromBrowserStorage();
+      checkHashShareLinkOnLoad();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
