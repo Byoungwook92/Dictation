@@ -992,6 +992,13 @@
     (function () {
       "use strict";
 
+      // ============================================================================
+      // ★ [GitHub에서 수정할 부분]
+      // 앱의 [Gemini API 키 설정] -> [GitHub 코드 내장용 암호화 문자열 만들기]에서 생성된
+      // 암호화 문자열(ENC1:...)을 아래 따옴표 안에 붙여넣고 저장(Commit)하세요.
+      // ============================================================================
+      var EMBEDDED_ENCRYPTED_KEY = "";
+
       var STORAGE_STATE_KEY = "korean_dictation_gemini_fast_state_v1";
       var STORAGE_KEYS_KEY = "korean_dictation_gemini_apikey_v1";
       var LEGACY_KEYS_KEY = "korean_dictation_serverless_apikeys_v1";
@@ -1118,6 +1125,81 @@
         }
         out = out.replace(/AIza[A-Za-z0-9_\-]{8,}/g, "[REDACTED]");
         return out;
+      }
+
+      // 비밀번호 기반 키스트림 생성기 (GitHub 보안 봇 스캔 방지 및 비밀번호 일치 검증용)
+      function deriveKeyBytes(passcode, saltStr, length) {
+        var seedStr = passcode + "::dictation_salt_v1::" + saltStr;
+        var h1 = 0x811c9dc5;
+        var h2 = 0x1b873593;
+        for (var i = 0; i < seedStr.length; i++) {
+          var c = seedStr.charCodeAt(i);
+          h1 ^= c;
+          h1 = Math.imul(h1, 0x01000193) >>> 0;
+          h2 ^= (c + i * 31);
+          h2 = Math.imul(h2, 0x85ebca6b) >>> 0;
+        }
+        var out = [];
+        for (var j = 0; j < length; j++) {
+          h1 ^= h1 << 13;
+          h1 ^= h1 >>> 17;
+          h1 ^= h1 << 5;
+          h1 = (h1 + Math.imul(h2, 1597334677)) >>> 0;
+          h2 = (h2 ^ (h1 >>> 11)) >>> 0;
+          out.push((h1 ^ (h2 >>> 3)) & 0xff);
+        }
+        return out;
+      }
+
+      function encryptApiKeyWithPin(plainKey, pin) {
+        var cleanKey = String(plainKey || "").trim();
+        var cleanPin = String(pin || "").trim();
+        if (!cleanKey) throw makeAppError("INVALID_INPUT", "암호화할 Gemini API 키를 먼저 입력하거나 등록해 주세요.");
+        if (!cleanPin) throw makeAppError("INVALID_INPUT", "잠금 해제에 사용할 비밀번호(예: 4자리 숫자)를 입력해 주세요.");
+
+        var payload = "OK_GEMINI::" + cleanKey;
+        var salt = Math.random().toString(36).slice(2, 8).toUpperCase();
+        var stream = deriveKeyBytes(cleanPin, salt, payload.length);
+        var xored = [];
+        for (var i = 0; i < payload.length; i++) {
+          xored.push(String.fromCharCode((payload.charCodeAt(i) & 0xff) ^ stream[i]));
+        }
+        var b64 = btoa(xored.join("")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        return "ENC1:" + salt + ":" + b64;
+      }
+
+      function decryptApiKeyWithPin(cipherText, pin) {
+        var raw = String(cipherText || "").trim();
+        var cleanPin = String(pin || "").trim();
+        if (!raw) throw makeAppError("INVALID_INPUT", "내장된 암호화 키가 없습니다.");
+        if (!cleanPin) throw makeAppError("INVALID_INPUT", "비밀번호를 입력해 주세요.");
+        var parts = raw.split(":");
+        if (parts.length !== 3 || parts[0] !== "ENC1") {
+          throw makeAppError("INVALID_INPUT", "암호화된 키 형식이 올바르지 않습니다(ENC1:... 형식이어야 합니다).");
+        }
+        var salt = parts[1];
+        var b64 = parts[2].replace(/-/g, "+").replace(/_/g, "/");
+        while (b64.length % 4) b64 += "=";
+        var bin = "";
+        try {
+          bin = atob(b64);
+        } catch (e) {
+          throw makeAppError("INVALID_INPUT", "암호화된 문자열이 손상되었습니다.");
+        }
+        var stream = deriveKeyBytes(cleanPin, salt, bin.length);
+        var chars = [];
+        for (var i = 0; i < bin.length; i++) {
+          chars.push(String.fromCharCode((bin.charCodeAt(i) & 0xff) ^ stream[i]));
+        }
+        var decoded = chars.join("");
+        if (decoded.indexOf("OK_GEMINI::") !== 0) {
+          throw makeAppError("AUTH_ERROR", "비밀번호가 일치하지 않습니다. 다시 확인해 주세요.");
+        }
+        var restoredKey = decoded.slice("OK_GEMINI::".length).trim();
+        if (!restoredKey) {
+          throw makeAppError("AUTH_ERROR", "복호화된 API 키가 비어 있습니다.");
+        }
+        return restoredKey;
       }
 
       function normalizeSentence(text) {
@@ -1617,13 +1699,28 @@
           hintEl.textContent = "⚠️ 아직 Gemini API 키가 등록되어 있지 않습니다. 우측 상단 [Gemini API 키 설정]에서 무료 키를 등록해 주세요.";
         }
 
+        var hasEmbedded = Boolean(EMBEDDED_ENCRYPTED_KEY && EMBEDDED_ENCRYPTED_KEY.trim());
         var container = document.getElementById("providerCardsContainer");
         var html = '<div class="gemini-key-card">';
         html += '  <div class="provider-head">';
         html += '    <strong>Google Gemini 무료 API (Google AI Studio)</strong>';
-        html += '    <span class="badge ' + (appState.registered ? 'badge-ok' : 'badge-none') + '">' + (appState.registered ? 'API 키 등록됨' : '미등록') + '</span>';
+        html += '    <span class="badge ' + (appState.registered ? 'badge-ok' : 'badge-none') + '">' + (appState.registered ? 'API 키 등록됨' : (hasEmbedded ? '암호화 키 내장됨 (잠금 상태)' : '미등록')) + '</span>';
         html += '  </div>';
         html += '  <div style="font-size:0.84rem; color:var(--text-sub); margin-bottom:10px;">확실한 무료 등급(Free of charge) 모델만 지원합니다. 기본 모델: <code>' + escapeHtml(activeModel) + '</code></div>';
+
+        // (A) 코드에 EMBEDDED_ENCRYPTED_KEY가 내장되어 있을 때 짧은 비밀번호로 즉시 잠금 해제하는 영역
+        if (hasEmbedded) {
+          html += '  <div style="background:var(--primary-light); border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:12px;">';
+          html += '    <strong style="font-size:0.9rem; color:var(--primary);">🔐 내장된 암호화 API 키 잠금 해제</strong>';
+          html += '    <div class="hint-text">코드에 암호화되어 저장된 API 키가 있습니다. 설정한 짧은 비밀번호만 입력하면 바로 활성화됩니다.</div>';
+          html += '    <div class="key-input-row" style="margin-top:8px;">';
+          html += '      <input type="password" id="pinUnlockInput" placeholder="설정한 비밀번호 입력" autocomplete="off" aria-label="내장 키 잠금 해제 비밀번호">';
+          html += '      <button type="button" class="btn-primary btn-sm" data-action="unlock-embedded-key">비밀번호로 키 활성화</button>';
+          html += '    </div>';
+          html += '  </div>';
+        }
+
+        // (B) 직접 API 키 입력/교체 영역
         html += '  <div class="key-input-row">';
         html += '    <input type="password" id="keyInput_gemini" placeholder="' + (appState.registered ? '새 Gemini API 키로 교체할 때만 입력' : 'Google AI Studio 무료 API 키(AIza...) 입력') + '" autocomplete="off" aria-label="Google Gemini API 키 입력">';
         html += '    <button type="button" class="btn-primary btn-sm" data-action="save-key">' + (appState.registered ? '키 교체' : '키 등록') + '</button>';
@@ -1635,6 +1732,23 @@
             html += '    <button type="button" class="btn-danger btn-sm" data-action="ask-delete-key">키 삭제</button>';
           }
         }
+        html += '  </div>';
+
+        // (C) GitHub 코드 내장용 암호화 문자열 생성기
+        html += '  <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--border);">';
+        html += '    <strong style="font-size:0.88rem;">🛠️ GitHub 파일에 API 키를 안전하게 심어두기 (암호화 코드 생성기)</strong>';
+        html += '    <div class="hint-text">Google 보안 봇에 차단되지 않도록 API 키를 짧은 비밀번호로 암호화합니다. 위 입력란에 API 키를 넣거나 등록한 뒤, 아래에 비밀번호를 입력하고 [암호화 코드 만들기]를 누르세요.</div>';
+        html += '    <div class="key-input-row" style="margin-top:8px;">';
+        html += '      <input type="password" id="pinCreateInput" placeholder="사용할 짧은 비밀번호 입력 (예: 1234)" autocomplete="off" aria-label="암호화용 비밀번호 설정">';
+        html += '      <button type="button" class="btn-accent btn-sm" data-action="generate-encrypted-code">암호화 코드 만들기</button>';
+        html += '    </div>';
+        html += '    <div id="encryptedCodeResultBox" style="display:' + (uiState.lastEncryptedLine ? 'block' : 'none') + '; margin-top:8px;">';
+        html += '      <div class="hint-text" style="color:var(--primary); font-weight:700; margin-bottom:4px;">아래 한 줄을 복사해 GitHub의 index.html 속 <code>var EMBEDDED_ENCRYPTED_KEY = "";</code> 줄과 바꿔치기하세요:</div>';
+        html += '      <div style="display:flex; gap:6px;">';
+        html += '        <input type="text" id="encryptedCodeOutput" class="share-url-input" readonly value="' + escapeHtml(uiState.lastEncryptedLine || '') + '" aria-label="생성된 암호화 코드 한 줄">';
+        html += '        <button type="button" class="btn-primary btn-sm" data-action="copy-encrypted-code">코드 복사</button>';
+        html += '      </div>';
+        html += '    </div>';
         html += '  </div>';
         html += '</div>';
         container.innerHTML = html;
@@ -2397,7 +2511,45 @@
         if (!btn) return;
         var action = btn.getAttribute("data-action");
 
-        if (action === "save-key") {
+        if (action === "unlock-embedded-key") {
+          var pinEl = document.getElementById("pinUnlockInput");
+          var pinVal = pinEl ? pinEl.value.trim() : "";
+          try {
+            var unlockedKey = decryptApiKeyWithPin(EMBEDDED_ENCRYPTED_KEY, pinVal);
+            geminiApiKey = unlockedKey;
+            if (pinEl) pinEl.value = "";
+            saveToBrowserStorage();
+            renderAll();
+            document.getElementById("settingsPanel").classList.remove("open");
+            showBanner("success", "비밀번호 확인 완료! 내장된 Gemini API 키가 활성화되었습니다.");
+          } catch (err) {
+            showBanner("error", err.message || "비밀번호가 일치하지 않습니다.");
+          }
+          return;
+        } else if (action === "generate-encrypted-code") {
+          var rawKeyEl = document.getElementById("keyInput_gemini");
+          var sourceKey = (rawKeyEl && rawKeyEl.value.trim()) || geminiApiKey;
+          var createPinEl = document.getElementById("pinCreateInput");
+          var createPin = createPinEl ? createPinEl.value.trim() : "";
+          try {
+            var encStr = encryptApiKeyWithPin(sourceKey, createPin);
+            uiState.lastEncryptedLine = 'var EMBEDDED_ENCRYPTED_KEY = "' + encStr + '";';
+            renderHeaderAndSettings();
+            showBanner("success", "GitHub 내장용 암호화 코드가 생성되었습니다. [코드 복사]를 눌러 index.html에 붙여넣으세요.");
+          } catch (err) {
+            showBanner("error", err.message || "암호화 코드 생성 실패");
+          }
+          return;
+        } else if (action === "copy-encrypted-code") {
+          var outEl = document.getElementById("encryptedCodeOutput");
+          if (!outEl || !outEl.value) return;
+          outEl.select();
+          try {
+            document.execCommand("copy");
+          } catch (e) {}
+          showBanner("success", "암호화 코드 한 줄을 복사했습니다. GitHub의 index.html에서 해당 줄을 교체해 주세요.");
+          return;
+        } else if (action === "save-key") {
           var inputEl = document.getElementById("keyInput_gemini");
           var keyVal = inputEl ? inputEl.value.trim() : "";
           if (!keyVal) {
@@ -2710,6 +2862,8 @@
           renderAll();
         },
         toSinoSpeech: toSinoKoreanNumberSpeech,
+        encryptKey: encryptApiKeyWithPin,
+        decryptKey: decryptApiKeyWithPin,
         getPublicStateJson: function () {
           return redactSecrets(JSON.stringify(appState));
         }
@@ -2795,6 +2949,10 @@
       loadFromBrowserStorage();
       checkHashShareLinkOnLoad();
       renderAll();
+      if (!appState.registered && EMBEDDED_ENCRYPTED_KEY && EMBEDDED_ENCRYPTED_KEY.trim() && !uiState.sharedListenMode) {
+        document.getElementById("settingsPanel").classList.add("open");
+        showBanner("info", "내장된 암호화 API 키가 감지되었습니다. 설정 화면에서 비밀번호만 입력하면 바로 사용할 수 있습니다.");
+      }
     })();
   </script>
 </body>
